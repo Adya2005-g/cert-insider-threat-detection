@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | CERT Insider Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-green: #22c55e;
+            --beacon-green: #39FF14;
+            --dark-green: #15803d;
+            --bg-white: #ffffff;
+            --bg-light: #f8fafc;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --sidebar-width: 260px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: white;
+            height: 100vh;
+            border-right: 1px solid #e2e8f0;
+            padding: 2rem 1.5rem;
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 3rem;
+        }
+
+        .logo span {
+            color: var(--primary-green);
+        }
+
+        .nav-menu {
+            list-style: none;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-muted);
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: #f0fdf4;
+            color: var(--primary-green);
+        }
+
+        .logout-btn {
+            margin-top: auto;
+            color: #ef4444;
+            border: 1px solid #fee2e2;
+        }
+
+        .logout-btn:hover {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 2rem 3rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-green);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            border: 1px solid #f1f5f9;
+        }
+
+        .stat-card h4 {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .stat-trend {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .trend-up {
+            color: #22c55e;
+        }
+
+        .trend-down {
+            color: #ef4444;
+        }
+
+        /* Dashboard Placeholder */
+        .dashboard-banner {
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+            padding: 3rem;
+            border-radius: 24px;
+            color: white;
+            margin-bottom: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .banner-content {
+            position: relative;
+            z-index: 2;
+            max-width: 500px;
+        }
+
+        .banner-content h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .banner-icon {
+            position: absolute;
+            right: -20px;
+            bottom: -20px;
+            font-size: 12rem;
+            opacity: 0.1;
+            transform: rotate(-15deg);
+        }
+
+        .activity-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid #f1f5f9;
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 0;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.2;
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-shield-halved"></i>
+            <div>CERT<span>INSIDER</span></div>
+        </div>
+
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="#" class="nav-link active"><i class="fas fa-chart-line"></i> Overview</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link"><i class="fas fa-users-viewfinder"></i> User Analysis</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link"><i class="fas fa-triangle-exclamation"></i> Threat Alerts</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link"><i class="fas fa-file-contract"></i> Reports</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link"><i class="fas fa-gear"></i> Settings</a>
+            </li>
+        </ul>
+
+        <a href="/logout" class="nav-link logout-btn">
+            <i class="fas fa-right-from-bracket"></i> Logout
+        </a>
+    </aside>
+
+    <main class="main-content">
+        <header>
+            <div>
+                <h1>Dashboard</h1>
+                <p style="color: var(--text-muted);">Welcome back, {{ current_user.fname }}</p>
+            </div>
+            <div class="user-profile">
+                <div class="avatar">{{ current_user.fname[0] }}{{ current_user.lname[0] }}</div>
+                <div style="font-weight: 600;">{{ current_user.fname }} {{ current_user.lname }}</div>
+            </div>
+        </header>
+
+        <section class="dashboard-banner">
+            <div class="banner-content">
+                <h2>Real-time Threat Monitoring Active</h2>
+                <p>System is currently scanning network activity and user behaviors for potential insider threats.</p>
+            </div>
+            <i class="fas fa-shield-virus banner-icon"></i>
+        </section>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Total Users Monitored</h4>
+                <div class="stat-value">1,284</div>
+                <div class="stat-trend trend-up"><i class="fas fa-arrow-up"></i> 12% from last month</div>
+            </div>
+            <div class="stat-card">
+                <h4>Active Anomalies</h4>
+                <div class="stat-value">0</div>
+                <div class="stat-trend" style="color: var(--primary-green);"><i class="fas fa-check-circle"></i> System
+                    Secure</div>
+            </div>
+            <div class="stat-card">
+                <h4>Data Scanned (24h)</h4>
+                <div class="stat-value">4.2 TB</div>
+                <div class="stat-trend trend-up"><i class="fas fa-arrow-up"></i> 8% increase</div>
+            </div>
+            <div class="stat-card">
+                <h4>Risk Score</h4>
+                <div class="stat-value">Low</div>
+                <div class="stat-trend" style="color: var(--primary-green);">Normal Operations</div>
+            </div>
+        </div>
+
+        <section class="activity-section">
+            <div class="activity-header">
+                <h3>Recent Alerts</h3>
+                <button class="nav-link"
+                    style="padding: 0.5rem 1rem; border: 1px solid #e2e8f0; font-size: 0.85rem;">View All</button>
+            </div>
+            <div class="empty-state">
+                <i class="fas fa-bell-slash"></i>
+                <p>No threats detected in the last 24 hours.</p>
+            </div>
+        </section>
+    </main>
+
+</body>
+
+</html>
