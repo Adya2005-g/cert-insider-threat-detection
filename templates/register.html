@@ -228,7 +228,7 @@
 
 <body>
 
-    <a href="/" class="back-home">
+    <a href="{{ url_for('index') }}" class="back-home">
         <i class="fas fa-arrow-left"></i> Back to Home
     </a>
 
@@ -263,7 +263,7 @@
         {% endif %}
         {% endwith %}
 
-        <form action="/register" method="POST">
+        <form action="{{ url_for('register_page') }}" method="POST">
             <div class="form-row">
                 <div class="form-group">
                     <label for="fname">First Name</label>
@@ -319,7 +319,7 @@
         </form>
 
         <div class="auth-footer">
-            Already have an account? <a href="/login">Sign In</a>
+            Already have an account? <a href="{{ url_for('login_page') }}">Sign In</a>
         </div>
     </div>
 

@@ -11,9 +11,7 @@
     <style>
         :root {
             --primary-green: #22c55e;
-            --beacon-green: #39FF14;
             --dark-green: #15803d;
-            --bg-white: #ffffff;
             --bg-light: #f1f5f9;
             --text-dark: #1e293b;
             --text-muted: #64748b;
@@ -24,7 +22,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: "Plus Jakarta Sans", sans-serif;
         }
 
         body {
@@ -43,19 +41,6 @@
             padding: 2.5rem;
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .logo {
@@ -70,10 +55,7 @@
             gap: 10px;
         }
 
-        .logo i {
-            color: var(--primary-green);
-        }
-
+        .logo i,
         .logo span {
             color: var(--primary-green);
         }
@@ -117,7 +99,6 @@
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-muted);
-            transition: var(--transition);
         }
 
         .form-control {
@@ -135,24 +116,6 @@
             background: #f0fdf4;
         }
 
-        .form-control:focus+i {
-            color: var(--primary-green);
-        }
-
-        .remember-forgot {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            font-size: 0.85rem;
-        }
-
-        .remember-forgot a {
-            color: var(--primary-green);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
         .btn-submit {
             width: 100%;
             padding: 0.9rem;
@@ -164,12 +127,31 @@
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
-            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
         }
 
         .btn-submit:hover {
             background: var(--dark-green);
             transform: translateY(-2px);
+        }
+
+        .flash-message {
+            padding: 0.8rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .flash-success {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #22c55e;
+        }
+
+        .flash-error {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #ef4444;
         }
 
         .auth-footer {
@@ -181,7 +163,8 @@
             color: var(--text-muted);
         }
 
-        .auth-footer a {
+        .auth-footer a,
+        .back-home {
             color: var(--primary-green);
             text-decoration: none;
             font-weight: 600;
@@ -191,35 +174,13 @@
             position: absolute;
             top: 2rem;
             left: 2rem;
-            text-decoration: none;
             color: var(--text-muted);
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: var(--transition);
-        }
-
-        .back-home:hover {
-            color: var(--primary-green);
-        }
-
-        @media (max-width: 480px) {
-            .auth-container {
-                padding: 1.5rem;
-            }
-
-            .back-home {
-                top: 1rem;
-                left: 1rem;
-            }
         }
     </style>
 </head>
 
 <body>
-
-    <a href="/" class="back-home">
+    <a href="{{ url_for('index') }}" class="back-home">
         <i class="fas fa-arrow-left"></i> Back to Home
     </a>
 
@@ -231,63 +192,45 @@
 
         <div class="auth-header">
             <h2>Welcome Back</h2>
-            <p>Enter your credentials to access the dashboard</p>
+            <p>Enter your username or email and password to access the dashboard</p>
         </div>
 
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-        <div class="flash-message" style="
-                        padding: 0.8rem;
-                        margin-bottom: 1.5rem;
-                        border-radius: 8px;
-                        font-size: 0.9rem;
-                        text-align: center;
-                        background: {% if category == 'success' %}#dcfce7{% elif category == 'error' %}#fee2e2{% else %}#f1f5f9{% endif %};
-                        color: {% if category == 'success' %}#15803d{% elif category == 'error' %}#b91c1c{% else %}#475569{% endif %};
-                        border: 1px solid {% if category == 'success' %}#22c55e{% elif category == 'error' %}#ef4444{% else %}#94a3b8{% endif %};
-                    ">
+        <div class="flash-message flash-{{ category if category in ['success', 'error'] else 'success' }}">
             {{ message }}
         </div>
         {% endfor %}
         {% endif %}
         {% endwith %}
 
-        <form action="/login" method="POST">
+        <form action="{{ url_for('login_page') }}" method="POST">
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="identifier">Username or Email</label>
                 <div class="input-wrapper">
-                    <input type="email" id="email" name="email" class="form-control" placeholder="name@company.com"
-                        required>
-                    <i class="fas fa-envelope"></i>
+                    <input type="text" id="identifier" name="identifier" class="form-control"
+                        placeholder="admin or admin@example.com" required>
+                    <i class="fas fa-user"></i>
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
                 <div class="input-wrapper">
-                    <input type="password" id="password" name="password" class="form-control" placeholder="••••••••"
-                        required>
+                    <input type="password" id="password" name="password" class="form-control"
+                        placeholder="Enter your password" required>
                     <i class="fas fa-lock"></i>
                 </div>
-            </div>
-
-            <div class="remember-forgot">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" style="accent-color: var(--primary-green);"> Remember me
-                </label>
-                <a href="#">Forgot Password?</a>
             </div>
 
             <button type="submit" class="btn-submit">Sign In</button>
         </form>
 
         <div class="auth-footer">
-            Don't have an account? <a href="/register">Create Account</a>
+            Don't have an account? <a href="{{ url_for('register_page') }}">Create Account</a>
         </div>
     </div>
-
 </body>
 
 </html>

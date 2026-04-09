@@ -17,6 +17,16 @@ class User(db.Model):
 
     logs = db.relationship("Log", back_populates="user", lazy=True)
 
+    @property
+    def fname(self):
+        parts = self.username.replace("_", ".").split(".")
+        return parts[0].capitalize() if parts and parts[0] else "User"
+
+    @property
+    def lname(self):
+        parts = self.username.replace("_", ".").split(".")
+        return parts[1].capitalize() if len(parts) > 1 and parts[1] else ""
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -25,3 +35,13 @@ class User(db.Model):
             "role": self.role,
             "created_at": self.created_at.isoformat() if isinstance(self.created_at, datetime) else None,
         }
+
+    @staticmethod
+    def anonymous():
+        class AnonymousUser:
+            is_authenticated = False
+            fname = ""
+            lname = ""
+            username = "guest"
+
+        return AnonymousUser()
