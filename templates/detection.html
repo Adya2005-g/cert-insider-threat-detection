@@ -1,14 +1,134 @@
-<h2>Insider Threat Detection</h2>
+<!DOCTYPE html>
+<html lang="en">
 
-<form method="POST" action="/predict">
-    <label>Login Time:</label>
-    <input type="number" name="login_time" required>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Detection</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            margin: 0;
+            padding: 32px 16px;
+        }
 
-    <label>File Access Count:</label>
-    <input type="number" name="file_access" required>
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+        }
 
-    <label>Email Activity:</label>
-    <input type="number" name="email_activity" required>
+        h2 {
+            margin-top: 0;
+        }
 
-    <button type="submit">Check</button>
-</form>
+        .flash {
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .grid {
+            display: grid;
+            gap: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+
+        .button,
+        .link-button {
+            border: none;
+            border-radius: 10px;
+            padding: 12px 18px;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .button {
+            background: #16a34a;
+            color: #fff;
+        }
+
+        .link-button {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .note {
+            margin-top: 20px;
+            color: #475569;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Insider Threat Detection</h2>
+        <p>Enter employee activity metrics to classify the session as normal or suspicious.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('predict') }}">
+            <div class="grid">
+                <div>
+                    <label for="login_time">Login Time</label>
+                    <input type="number" step="any" id="login_time" name="login_time" required>
+                </div>
+
+                <div>
+                    <label for="file_access">File Access Count</label>
+                    <input type="number" id="file_access" name="file_access" required>
+                </div>
+
+                <div>
+                    <label for="email_activity">Email Activity</label>
+                    <input type="number" id="email_activity" name="email_activity" required>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="button" type="submit">Check Threat Status</button>
+                <a class="link-button" href="{{ url_for('upload') }}">Upload CSV Instead</a>
+                <a class="link-button" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+            </div>
+        </form>
+
+        <p class="note">Required dataset fields: `login_time`, `file_access`, and `email_activity`.</p>
+    </div>
+</body>
+
+</html>

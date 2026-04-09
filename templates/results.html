@@ -1,5 +1,90 @@
-<h2>Results</h2>
+<!DOCTYPE html>
+<html lang="en">
 
-{{ tables|safe }}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Results</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            margin: 0;
+            padding: 32px 16px;
+        }
 
-<a href="/dashboard">Back</a>
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+        }
+
+        .summary {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin: 20px 0 24px;
+        }
+
+        .pill {
+            background: #e2e8f0;
+            border-radius: 999px;
+            padding: 10px 16px;
+            font-weight: 600;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table th,
+        .results-table td {
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .results-table th {
+            background: #f1f5f9;
+        }
+
+        a {
+            display: inline-block;
+            margin-right: 12px;
+            margin-top: 16px;
+            text-decoration: none;
+            color: #166534;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Batch Detection Results</h2>
+
+        {% if tables %}
+        {% if summary %}
+        <div class="summary">
+            {% for label, count in summary.items() %}
+            <div class="pill">{{ label }}: {{ count }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {{ tables|safe }}
+        {% else %}
+        <p>No processed dataset is loaded yet. Upload a CSV file to see batch results.</p>
+        {% endif %}
+
+        <a href="{{ url_for('upload') }}">Upload Another CSV</a>
+        <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    </div>
+</body>
+
+</html>

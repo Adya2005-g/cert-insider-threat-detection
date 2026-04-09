@@ -238,19 +238,19 @@
 
         <ul class="nav-menu">
             <li class="nav-item">
-                <a href="#" class="nav-link active"><i class="fas fa-chart-line"></i> Overview</a>
+                <a href="{{ url_for('dashboard') }}" class="nav-link active"><i class="fas fa-chart-line"></i> Overview</a>
             </li>
             <li class="nav-item">
-                <a href="#" class="nav-link"><i class="fas fa-users-viewfinder"></i> User Analysis</a>
+                <a href="{{ url_for('detect_view') }}" class="nav-link"><i class="fas fa-users-viewfinder"></i> User Analysis</a>
             </li>
             <li class="nav-item">
-                <a href="#" class="nav-link"><i class="fas fa-triangle-exclamation"></i> Threat Alerts</a>
+                <a href="{{ url_for('results') }}" class="nav-link"><i class="fas fa-triangle-exclamation"></i> Threat Alerts</a>
             </li>
             <li class="nav-item">
-                <a href="#" class="nav-link"><i class="fas fa-file-contract"></i> Reports</a>
+                <a href="{{ url_for('upload') }}" class="nav-link"><i class="fas fa-file-contract"></i> Reports</a>
             </li>
             <li class="nav-item">
-                <a href="#" class="nav-link"><i class="fas fa-gear"></i> Settings</a>
+                <a href="{{ url_for('index') }}" class="nav-link"><i class="fas fa-gear"></i> Settings</a>
             </li>
         </ul>
 
@@ -266,7 +266,7 @@
                 <p style="color: var(--text-muted);">Welcome back, {{ current_user.fname }}</p>
             </div>
             <div class="user-profile">
-                <div class="avatar">{{ current_user.fname[0] }}{{ current_user.lname[0] }}</div>
+                <div class="avatar">{{ current_user.fname[:1] }}{{ current_user.lname[:1] }}</div>
                 <div style="font-weight: 600;">{{ current_user.fname }} {{ current_user.lname }}</div>
             </div>
         </header>
@@ -275,6 +275,12 @@
             <div class="banner-content">
                 <h2>Real-time Threat Monitoring Active</h2>
                 <p>System is currently scanning network activity and user behaviors for potential insider threats.</p>
+                <p style="margin-top: 1rem;">
+                    <a href="{{ url_for('detect_view') }}"
+                        style="display: inline-block; text-decoration: none; color: #166534; background: #ffffff; padding: 0.75rem 1rem; border-radius: 10px; font-weight: 700;">Run Manual Detection</a>
+                    <a href="{{ url_for('upload') }}"
+                        style="display: inline-block; text-decoration: none; color: #ffffff; border: 1px solid rgba(255,255,255,0.6); padding: 0.75rem 1rem; border-radius: 10px; font-weight: 700; margin-left: 0.75rem;">Upload Dataset</a>
+                </p>
             </div>
             <i class="fas fa-shield-virus banner-icon"></i>
         </section>
