@@ -1,34 +1,37 @@
 import os
+import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from services.ml_model import predict_threat
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'cert-insider-thread-detection-secret-key'
+app.config['SECRET_KEY'] = 'secret-key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = 'uploads'
 
 db = SQLAlchemy(app)
-login_manager = LoginManager()
+login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-login_manager.init_app(app)
 
-# User Model
+# ---------------- USER MODEL ----------------
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    fname = db.Column(db.String(50), nullable=False)
-    lname = db.Column(db.String(50), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+    fname = db.Column(db.String(50))
+    lname = db.Column(db.String(50))
+    email = db.Column(db.String(100), unique=True)
+    password = db.Column(db.String(200))
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Create Database
 with app.app_context():
     db.create_all()
+
+# ---------------- ROUTES ----------------
 
 @app.route('/')
 def index():
@@ -37,56 +40,26 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        user = User.query.filter_by(email=email).first()
-        if user and check_password_hash(user.password, password):
+        user = User.query.filter_by(email=request.form['email']).first()
+        if user and check_password_hash(user.password, request.form['password']):
             login_user(user)
-            flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
         else:
-            flash('Invalid email or password. Please try again.', 'error')
-            
+            flash("Invalid credentials")
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        fname = request.form.get('fname')
-        lname = request.form.get('lname')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-
-        # Basic Validations
-        user_exists = User.query.filter_by(email=email).first()
-        if user_exists:
-            flash('Email already registered.', 'error')
-            return redirect(url_for('register'))
-        
-        if password != confirm_password:
-            flash('Passwords do not match.', 'error')
-            return redirect(url_for('register'))
-
-        if len(password) < 6:
-            flash('Password must be at least 6 characters long.', 'error')
-            return redirect(url_for('register'))
-
-        # Create new user
-        new_user = User(
-            fname=fname, 
-            lname=lname, 
-            email=email, 
-            password=generate_password_hash(password)
+        user = User(
+            fname=request.form['fname'],
+            lname=request.form['lname'],
+            email=request.form['email'],
+            password=generate_password_hash(request.form['password'])
         )
-        
-        db.session.add(new_user)
+        db.session.add(user)
         db.session.commit()
-        
-        flash('Registration successful! Please login.', 'success')
         return redirect(url_for('login'))
-        
     return render_template('register.html')
 
 @app.route('/dashboard')
@@ -98,8 +71,49 @@ def dashboard():
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
-if __name__ == '__main__':
+# ---------------- ML ROUTES ----------------
+
+@app.route('/detect')
+@login_required
+def detect():
+    return render_template('detection.html')
+
+@app.route('/predict', methods=['POST'])
+@login_required
+def predict():
+    data = {
+        "login_time": float(request.form['login_time']),
+        "file_access": int(request.form['file_access']),
+        "email_activity": int(request.form['email_activity'])
+    }
+
+    result = predict_threat(data)
+
+    return render_template('result.html', result=result)
+
+@app.route('/upload', methods=['GET', 'POST'])
+@login_required
+def upload():
+    if request.method == 'POST':
+        file = request.files['file']
+        path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(path)
+
+        df = pd.read_csv(path)
+
+        df['result'] = df.apply(lambda row: predict_threat({
+            "login_time": row['login_time'],
+            "file_access": row['file_access'],
+            "email_activity": row['email_activity']
+        }), axis=1)
+
+        df.to_csv("processed/output.csv", index=False)
+
+        return render_template('results.html', tables=df.head().to_html())
+
+    return render_template('upload.html')
+
+if __name__ == "__main__":
     app.run(debug=True)
