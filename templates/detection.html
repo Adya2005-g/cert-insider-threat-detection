@@ -6,10 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Threat Detection</title>
     <style>
+        :root {
+            --primary-green: #16a34a;
+            --primary-dark: #166534;
+            --danger-soft: #fee2e2;
+            --danger-text: #991b1b;
+            --surface: #ffffff;
+            --page: #f8fafc;
+            --text: #0f172a;
+            --muted: #475569;
+            --border: #cbd5e1;
+        }
+
         body {
             font-family: "Segoe UI", sans-serif;
-            background: #f8fafc;
-            color: #0f172a;
+            background: var(--page);
+            color: var(--text);
             margin: 0;
             padding: 32px 16px;
         }
@@ -17,7 +29,7 @@
         .container {
             max-width: 720px;
             margin: 0 auto;
-            background: #ffffff;
+            background: var(--surface);
             border-radius: 20px;
             padding: 32px;
             box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
@@ -31,8 +43,8 @@
             padding: 12px 14px;
             border-radius: 10px;
             margin-bottom: 18px;
-            background: #fee2e2;
-            color: #991b1b;
+            background: var(--danger-soft);
+            color: var(--danger-text);
         }
 
         .grid {
@@ -49,7 +61,7 @@
         input {
             width: 100%;
             padding: 12px;
-            border: 1px solid #cbd5e1;
+            border: 1px solid var(--border);
             border-radius: 10px;
             font-size: 1rem;
             box-sizing: border-box;
@@ -73,26 +85,68 @@
         }
 
         .button {
-            background: #16a34a;
+            background: var(--primary-green);
             color: #fff;
         }
 
         .link-button {
             background: #e2e8f0;
-            color: #0f172a;
+            color: var(--text);
         }
 
         .note {
             margin-top: 20px;
-            color: #475569;
+            color: var(--muted);
+        }
+
+        .result-card {
+            margin-top: 28px;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #dcfce7;
+            background: #f0fdf4;
+        }
+
+        .result-card h3 {
+            margin-bottom: 12px;
+            color: var(--primary-dark);
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .metric {
+            padding: 14px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .metric span {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .metric strong {
+            font-size: 1.1rem;
+        }
+
+        .helper {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 0.95rem;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h2>Insider Threat Detection</h2>
-        <p>Enter employee activity metrics to classify the session as normal or suspicious.</p>
+        <h2>User Analysis</h2>
+        <p>Review a single employee profile using the same model features used in batch detection.</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -105,29 +159,57 @@
         <form method="POST" action="{{ url_for('predict') }}">
             <div class="grid">
                 <div>
-                    <label for="login_time">Login Time</label>
-                    <input type="number" step="any" id="login_time" name="login_time" required>
+                    <label for="login_frequency">Login Frequency</label>
+                    <input type="number" step="any" min="0" id="login_frequency" name="login_frequency" required
+                        value="{{ analysis.login_frequency if analysis else '' }}">
                 </div>
 
                 <div>
-                    <label for="file_access">File Access Count</label>
-                    <input type="number" id="file_access" name="file_access" required>
+                    <label for="after_hours_activity">After-hours Activity</label>
+                    <input type="number" min="0" max="1" id="after_hours_activity" name="after_hours_activity" required
+                        value="{{ analysis.after_hours_activity if analysis else '' }}">
                 </div>
 
                 <div>
-                    <label for="email_activity">Email Activity</label>
-                    <input type="number" id="email_activity" name="email_activity" required>
+                    <label for="file_access_count">File Access Count</label>
+                    <input type="number" step="any" min="0" id="file_access_count" name="file_access_count" required
+                        value="{{ analysis.file_access_count if analysis else '' }}">
                 </div>
             </div>
 
             <div class="actions">
-                <button class="button" type="submit">Check Threat Status</button>
+                <button class="button" type="submit">Analyze User</button>
                 <a class="link-button" href="{{ url_for('upload') }}">Upload CSV Instead</a>
                 <a class="link-button" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
             </div>
         </form>
 
-        <p class="note">Required dataset fields: `login_time`, `file_access`, and `email_activity`.</p>
+        <p class="note">Use `0` for normal-hours behavior and `1` for after-hours activity.</p>
+
+        {% if analysis %}
+        <section class="result-card">
+            <h3>Analysis Result</h3>
+            <div class="result-grid">
+                <div class="metric">
+                    <span>Detection</span>
+                    <strong>{{ analysis.detection }}</strong>
+                </div>
+                <div class="metric">
+                    <span>Threat Level</span>
+                    <strong>{{ analysis.threat_level }}</strong>
+                </div>
+                <div class="metric">
+                    <span>Risk Score</span>
+                    <strong>{{ analysis.risk_score }}</strong>
+                </div>
+                <div class="metric">
+                    <span>Anomaly Score</span>
+                    <strong>{{ analysis.anomaly_score }}</strong>
+                </div>
+            </div>
+            <p class="helper">Higher risk and anomaly scores indicate behavior farther from the learned baseline.</p>
+        </section>
+        {% endif %}
     </div>
 </body>
 

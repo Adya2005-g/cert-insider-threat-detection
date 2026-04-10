@@ -37,7 +37,7 @@ def train_isolation_forest(
 
     # Save model
     joblib.dump(model, MODEL_PATH)
-    print(f"✅ Model saved at: {MODEL_PATH}")
+    print(f"Model saved at: {MODEL_PATH}")
 
     return model
 
@@ -48,7 +48,7 @@ def train_isolation_forest(
 def load_model() -> IsolationForest | None:
     """Load a persisted model if one is available."""
     if not os.path.exists(MODEL_PATH):
-        print("⚠️ No saved model found")
+        print("No saved model found")
         return None
 
     return joblib.load(MODEL_PATH)
@@ -62,7 +62,7 @@ def get_or_train_model(data: pd.DataFrame) -> IsolationForest:
     model = load_model()
 
     if model is None:
-        print("🔁 Training new model...")
+        print("Training new model...")
         return train_isolation_forest(data)
 
     return model
@@ -90,7 +90,6 @@ def detect_anomalies(data: pd.DataFrame, retrain: bool = False) -> pd.DataFrame:
     result["anomaly_flag"] = (predictions == -1).astype(int)  # 1 = threat
     result["anomaly_score"] = -decision_scores  # higher = riskier
 
-    # 👇 ADD THIS (IMPORTANT for your UI issue)
     result["detection"] = result["anomaly_flag"].map({
         1: "Threat",
         0: "Normal"
