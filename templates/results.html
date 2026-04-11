@@ -200,9 +200,11 @@
                         <th>User</th>
                         <th>Status</th>
                         <th>Threat Level</th>
-                        <th>Login Frequency</th>
-                        <th>After-hours Activity</th>
-                        <th>File Access Count</th>
+                        <th>Logins</th>
+                        <th>Night/After Hrs</th>
+                        <th>Files</th>
+                        <th>Emails</th>
+                        <th>USB</th>
                         <th>Risk Score</th>
                     </tr>
                 </thead>
@@ -213,8 +215,10 @@
                         <td><span class="tag {{ 'threat' if row.status == 'Threat' else 'normal' }}">{{ row.status }}</span></td>
                         <td>{{ row.threat_level }}</td>
                         <td>{{ row.login_frequency }}</td>
-                        <td>{{ row.after_hours_activity }}</td>
+                        <td>{{ row.night_login_count }}/{{ row.after_hours_activity }}</td>
                         <td>{{ row.file_access_count }}</td>
+                        <td>{{ row.email_activity_count }}</td>
+                        <td>{{ row.usb_usage_count }}</td>
                         <td>{{ row.risk_score }}</td>
                     </tr>
                     {% endfor %}

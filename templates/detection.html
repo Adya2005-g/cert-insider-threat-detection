@@ -165,15 +165,33 @@
                 </div>
 
                 <div>
-                    <label for="after_hours_activity">After-hours Activity</label>
+                    <label for="night_login_count">Night Activity (12AM - 6AM)</label>
+                    <input type="number" step="any" min="0" id="night_login_count" name="night_login_count" required
+                        value="{{ analysis.night_login_count if analysis else '0' }}">
+                </div>
+
+                <div>
+                    <label for="after_hours_activity">After-hours Activity (9PM - 9AM)</label>
                     <input type="number" min="0" max="1" id="after_hours_activity" name="after_hours_activity" required
-                        value="{{ analysis.after_hours_activity if analysis else '' }}">
+                        value="{{ analysis.after_hours_activity if analysis else '0' }}">
                 </div>
 
                 <div>
                     <label for="file_access_count">File Access Count</label>
                     <input type="number" step="any" min="0" id="file_access_count" name="file_access_count" required
-                        value="{{ analysis.file_access_count if analysis else '' }}">
+                        value="{{ analysis.file_access_count if analysis else '0' }}">
+                </div>
+
+                <div>
+                    <label for="email_activity_count">Email Count</label>
+                    <input type="number" step="any" min="0" id="email_activity_count" name="email_activity_count" required
+                        value="{{ analysis.email_activity_count if analysis else '0' }}">
+                </div>
+
+                <div>
+                    <label for="usb_usage_count">USB Usage Count</label>
+                    <input type="number" step="any" min="0" id="usb_usage_count" name="usb_usage_count" required
+                        value="{{ analysis.usb_usage_count if analysis else '0' }}">
                 </div>
             </div>
 

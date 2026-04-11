@@ -16,7 +16,8 @@ logging.basicConfig(level=logging.INFO)
 def merge_logs(
     login_df: pd.DataFrame,
     email_df: pd.DataFrame,
-    file_df: pd.DataFrame
+    file_df: pd.DataFrame,
+    usb_df: pd.DataFrame = None
 ) -> pd.DataFrame:
     """
     Merge multiple log dataframes (login, email, file logs)

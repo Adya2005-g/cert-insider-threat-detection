@@ -157,7 +157,10 @@ def _serialize_result_row(log: Log) -> dict:
         "user": user,
         "login_frequency": round(float(log.login_frequency), 2),
         "after_hours_activity": round(float(log.after_hours_activity), 2),
+        "night_login_count": round(float(log.night_login_count), 2),
         "file_access_count": round(float(log.file_access_count), 2),
+        "email_activity_count": round(float(log.email_activity_count), 2),
+        "usb_usage_count": round(float(log.usb_usage_count), 2),
         "threat_level": str(log.threat_level).title(),
         "risk_score": round(float(score), 2),
         "status": "Threat" if log.anomaly_flag else "Normal",
@@ -216,6 +219,21 @@ def _dashboard_context():
         avg_risk_label = "Low"
         risk_note = f"Average risk score {avg_risk:.1f}"
 
+    # Chart Data: Threat Levels
+    threat_distribution = {
+        "Normal": all_logs_count - anomalies_count,
+        "Threats": anomalies_count
+    }
+
+    # Chart Data: Risk Buckets
+    risk_buckets = {"Low": 0, "Medium": 0, "High": 0, "Critical": 0}
+    for log in batch_logs:
+        score = float(log.risk_score.score) if log.risk_score else 0
+        if score >= 80: risk_buckets["Critical"] += 1
+        elif score >= 60: risk_buckets["High"] += 1
+        elif score >= 30: risk_buckets["Medium"] += 1
+        else: risk_buckets["Low"] += 1
+
     return {
         "stats": {
             "users_monitored": user_count,
@@ -226,6 +244,10 @@ def _dashboard_context():
             "alerts_count": Alert.query.count(),
             "latest_batch_records": len(batch_logs),
             "high_risk_count": high_risk_count,
+        },
+        "charts": {
+            "threat_distribution": threat_distribution,
+            "risk_buckets": risk_buckets
         },
         "modules": _dashboard_modules(),
         "recent_alerts": [_serialize_dashboard_alert(alert) for alert in recent_alerts],
@@ -266,7 +288,10 @@ def _process_uploaded_dataset(file_storage):
             event_timestamp=row["timestamp"].to_pydatetime() if hasattr(row["timestamp"], "to_pydatetime") else None,
             login_frequency=float(row["login_frequency"]),
             after_hours_activity=float(row["after_hours_activity"]),
+            night_login_count=float(row["night_login_count"]),
             file_access_count=float(row["file_access_count"]),
+            email_activity_count=float(row["email_activity_count"]),
+            usb_usage_count=float(row["usb_usage_count"]),
             anomaly_flag=bool(row["anomaly_flag"]),
             threat_level=str(row["threat_level"]),
             source_filename=file_storage.filename,
@@ -376,6 +401,8 @@ def create_app(config_object=DevelopmentConfig):
                 username=username,
                 email=email,
                 password_hash=generate_password_hash(password),
+                first_name=first_name,
+                last_name=last_name,
                 role="analyst",
             )
             db.session.add(user)
@@ -391,6 +418,35 @@ def create_app(config_object=DevelopmentConfig):
     @_login_required
     def dashboard():
         return render_template("dashboard.html", **_dashboard_context())
+
+    @app.route("/profile", methods=["GET", "POST"])
+    @_login_required
+    def profile():
+        user = _current_user()
+        if request.method == "POST":
+            first_name = request.form.get("first_name", "").strip()
+            last_name = request.form.get("last_name", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            new_password = request.form.get("new_password", "").strip()
+            
+            # Simple updates
+            if first_name: user.first_name = first_name
+            if last_name: user.last_name = last_name
+            
+            if email and email != user.email:
+                if User.query.filter_by(email=email).first():
+                    flash("Email is already taken.", "error")
+                else:
+                    user.email = email
+            
+            if new_password:
+                user.password_hash = generate_password_hash(new_password)
+            
+            db.session.commit()
+            flash("Profile updated successfully.", "success")
+            return redirect(url_for("profile"))
+
+        return render_template("profile.html", user=user)
 
     @app.route("/detection", methods=["GET"])
     @app.route("/detect", methods=["GET"])
@@ -419,7 +475,10 @@ def create_app(config_object=DevelopmentConfig):
         try:
             login_frequency = float(request.form.get("login_frequency", 0))
             after_hours_activity = float(request.form.get("after_hours_activity", 0))
+            night_login_count = float(request.form.get("night_login_count", 0))
             file_access_count = float(request.form.get("file_access_count", 0))
+            email_activity_count = float(request.form.get("email_activity_count", 0))
+            usb_usage_count = float(request.form.get("usb_usage_count", 0))
         except ValueError:
             flash("Enter numeric values for all analysis fields.", "error")
             return render_template("detection.html", analysis=None), 400
@@ -429,7 +488,10 @@ def create_app(config_object=DevelopmentConfig):
                 {
                     "login_frequency": login_frequency,
                     "after_hours_activity": after_hours_activity,
+                    "night_login_count": night_login_count,
                     "file_access_count": file_access_count,
+                    "email_activity_count": email_activity_count,
+                    "usb_usage_count": usb_usage_count,
                 }
             ]
         )
@@ -541,12 +603,47 @@ def create_app(config_object=DevelopmentConfig):
     def logout():
         session.pop("user_id", None)
         flash("Signed out successfully.", "success")
-        return redirect(url_for("login_page"))
+        return redirect(url_for("index"))
 
     with app.app_context():
         from models import alert, log, risk_score, user  # noqa: F401
-
         db.create_all()
+        
+        # --- Automatic Schema Migration ---
+        try:
+            from sqlalchemy import text
+            # List of new columns to check and add
+            new_columns = [
+                ("night_login_count", "FLOAT DEFAULT 0.0"),
+                ("email_activity_count", "FLOAT DEFAULT 0.0"),
+                ("usb_usage_count", "FLOAT DEFAULT 0.0")
+            ]
+            
+            for col_name, col_type in new_columns:
+                try:
+                    db.session.execute(text(f"ALTER TABLE logs ADD COLUMN {col_name} {col_type}"))
+                    db.session.commit()
+                    logging.info(f"Migration: Added column {col_name} to logs table.")
+                except Exception:
+                    db.session.rollback()
+                    # Skip if column already exists
+                    pass
+            # User migration
+            new_user_columns = [
+                ("first_name", "VARCHAR(100)"),
+                ("last_name", "VARCHAR(100)")
+            ]
+            for col_name, col_type in new_user_columns:
+                try:
+                    db.session.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                    db.session.commit()
+                    logging.info(f"Migration: Added column {col_name} to users table.")
+                except Exception:
+                    db.session.rollback()
+                    pass
+        except Exception as migration_error:
+            logging.error(f"Migration failed: {migration_error}")
+
         seed_default_user()
 
     return app

@@ -5,6 +5,8 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
+from sklearn.svm import OneClassSVM
+from sklearn.ensemble import RandomForestClassifier
 
 from utils.constants import MODEL_FEATURES
 
@@ -17,28 +19,34 @@ MODEL_PATH = os.path.join(MODEL_DIR, "model.pkl")
 
 
 # ------------------------------
-# Train Model
+# Train Models
 # ------------------------------
-def train_isolation_forest(
-    data: pd.DataFrame, contamination: float = 0.1
-) -> IsolationForest:
-    """Train a new Isolation Forest model and persist it to disk."""
-
-    # Select only required features
+def train_model(
+    data: pd.DataFrame, 
+    algorithm: str = "isolation_forest",
+    contamination: float = 0.1
+):
+    """Train a selected model and persist it to disk."""
     training_frame = data[MODEL_FEATURES].astype(float)
 
-    model = IsolationForest(
-        contamination=contamination,
-        n_estimators=200,
-        random_state=42,
-    )
+    if algorithm == "isolation_forest":
+        model = IsolationForest(
+            contamination=contamination,
+            n_estimators=200,
+            random_state=42,
+        )
+    elif algorithm == "one_class_svm":
+        model = OneClassSVM(
+            nu=contamination,
+            kernel="rbf",
+            gamma="auto"
+        )
+    else:
+        # Default to Isolation Forest if unknown
+        model = IsolationForest(contamination=contamination, random_state=42)
 
     model.fit(training_frame)
-
-    # Save model
     joblib.dump(model, MODEL_PATH)
-    print(f"Model saved at: {MODEL_PATH}")
-
     return model
 
 
@@ -57,13 +65,13 @@ def load_model() -> IsolationForest | None:
 # ------------------------------
 # Get or Train Model
 # ------------------------------
-def get_or_train_model(data: pd.DataFrame) -> IsolationForest:
+def get_or_train_model(data: pd.DataFrame, algorithm: str = "isolation_forest") -> any:
     """Return an existing model or train one using the supplied dataset."""
     model = load_model()
 
     if model is None:
         print("Training new model...")
-        return train_isolation_forest(data)
+        return train_model(data, algorithm=algorithm)
 
     return model
 
@@ -102,18 +110,27 @@ def detect_anomalies(data: pd.DataFrame, retrain: bool = False) -> pd.DataFrame:
 # Risk Score Calculation
 # ------------------------------
 def calculate_risk_score(data: pd.DataFrame) -> pd.Series:
-    """Calculate a bounded risk score using engineered behavioral features."""
+    """Calculate a bounded risk score (0-100) using weights for various behaviors."""
 
-    login_component = np.clip(data["login_frequency"] / 10.0, 0, 1) * 25
-    after_hours_component = np.clip(data["after_hours_activity"], 0, 1) * 35
-    file_component = np.clip(data["file_access_count"] / 20.0, 0, 1) * 25
-    anomaly_component = np.clip(data["anomaly_score"] * 100.0, 0, 15)
+    # Normalizing weights
+    login_comp = np.clip(data["login_frequency"] / 20.0, 0, 1) * 10
+    night_comp = np.clip(data["night_login_count"] / 2.0, 0, 1) * 25
+    after_hours_comp = np.clip(data["after_hours_activity"] / 5.0, 0, 1) * 15
+    file_comp = np.clip(data["file_access_count"] / 30.0, 0, 1) * 20
+    email_comp = np.clip(data["email_activity_count"] / 50.0, 0, 1) * 15
+    usb_comp = np.clip(data["usb_usage_count"] / 1.0, 0, 1) * 15
+
+    # Base anomaly score influence
+    anomaly_bonus = np.clip(data["anomaly_score"] * 50, 0, 10) if "anomaly_score" in data else 0
 
     risk_score = (
-        login_component
-        + after_hours_component
-        + file_component
-        + anomaly_component
+        login_comp
+        + night_comp
+        + after_hours_comp
+        + file_comp
+        + email_comp
+        + usb_comp
+        + anomaly_bonus
     )
 
     return np.clip(risk_score, 0, 100)

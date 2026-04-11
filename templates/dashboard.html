@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --green-700: #166534;
@@ -298,9 +299,20 @@
 
         .stats-grid,
         .module-grid,
+        .chart-grid,
         .lower-grid {
             display: grid;
             gap: 18px;
+        }
+
+        .chart-grid {
+            grid-template-columns: 1fr 1.5fr;
+            margin-bottom: 24px;
+        }
+
+        .chart-container {
+            height: 300px;
+            position: relative;
         }
 
         .stats-grid {
@@ -507,6 +519,7 @@
             <li><a href="{{ url_for('detect_view') }}" class="nav-link"><i class="fas fa-users-viewfinder"></i> User Analysis</a></li>
             <li><a href="{{ url_for('upload') }}" class="nav-link"><i class="fas fa-file-arrow-up"></i> Data Acquisition</a></li>
             <li><a href="{{ url_for('results') }}" class="nav-link"><i class="fas fa-triangle-exclamation"></i> Alerts & Reports</a></li>
+            <li><a href="{{ url_for('profile') }}" class="nav-link"><i class="fas fa-user-gear"></i> Profile Settings</a></li>
         </ul>
 
         <div class="sidebar-summary">
@@ -526,13 +539,13 @@
                 <h1>Insider Threat Operations Dashboard</h1>
                 <p>The current workspace follows the synopsis pipeline: collect logs, clean and integrate activity, engineer features, build user profiles, score anomalies, classify threats, and surface analyst-ready alerts and reports.</p>
             </div>
-            <div class="user-profile">
+            <a href="{{ url_for('profile') }}" class="user-profile" style="text-decoration: none; color: inherit;">
                 <div class="avatar">{{ current_user.fname[:1] }}{{ current_user.lname[:1] }}</div>
                 <div>
                     <strong>{{ current_user.fname }} {{ current_user.lname }}</strong>
                     <p style="color: var(--slate-500); font-size: 0.9rem;">Authenticated analyst</p>
                 </div>
-            </div>
+            </a>
         </header>
 
         <section class="hero">
@@ -567,26 +580,30 @@
             </div>
         </section>
 
-        <section class="stats-grid">
-            <div class="stat-card">
-                <span>Users Monitored</span>
-                <strong>{{ stats.users_monitored }}</strong>
-                <p>Employees discovered from uploaded activity logs.</p>
+        </section>
+
+        <section class="chart-grid">
+            <div class="panel">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">Phase 6: Anomaly Detection</div>
+                        <h3>Threat Distribution</h3>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="threatChart"></canvas>
+                </div>
             </div>
-            <div class="stat-card">
-                <span>Detected Anomalies</span>
-                <strong>{{ stats.active_anomalies }}</strong>
-                <p>Outlier sessions flagged by the anomaly detection pipeline.</p>
-            </div>
-            <div class="stat-card">
-                <span>Processed Records</span>
-                <strong>{{ stats.records_processed }}</strong>
-                <p>Stored user behavior records available for dashboard review.</p>
-            </div>
-            <div class="stat-card">
-                <span>Current Risk Posture</span>
-                <strong>{{ stats.risk_label }}</strong>
-                <p>{{ stats.risk_note }}</p>
+            <div class="panel">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">Phase 7: Risk Scoring</div>
+                        <h3>Risk Level Analysis</h3>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="riskChart"></canvas>
+                </div>
             </div>
         </section>
 
@@ -700,6 +717,63 @@
             </div>
         </section>
     </main>
+    <script>
+        // Chart Initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Threat Distribution Chart
+            const threatCtx = document.getElementById('threatChart').getContext('2d');
+            new Chart(threatCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Normal', 'Threats'],
+                    datasets: [{
+                        data: [{{ charts.threat_distribution.Normal }}, {{ charts.threat_distribution.Threats }}],
+                        backgroundColor: ['#22c55e', '#dc2626'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // Risk Level Analysis Chart
+            const riskCtx = document.getElementById('riskChart').getContext('2d');
+            new Chart(riskCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Low', 'Medium', 'High', 'Critical'],
+                    datasets: [{
+                        label: 'Users',
+                        data: [
+                            {{ charts.risk_buckets.Low }}, 
+                            {{ charts.risk_buckets.Medium }}, 
+                            {{ charts.risk_buckets.High }}, 
+                            {{ charts.risk_buckets.Critical }}
+                        ],
+                        backgroundColor: ['#166534', '#f59e0b', '#c2410c', '#dc2626'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

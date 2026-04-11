@@ -12,6 +12,8 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
+    first_name = db.Column(db.String(100), nullable=True)
+    last_name = db.Column(db.String(100), nullable=True)
     role = db.Column(db.String(50), nullable=False, default="analyst")
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 
@@ -19,11 +21,15 @@ class User(db.Model):
 
     @property
     def fname(self):
+        if self.first_name:
+            return self.first_name.capitalize()
         parts = self.username.replace("_", ".").split(".")
         return parts[0].capitalize() if parts and parts[0] else "User"
 
     @property
     def lname(self):
+        if self.last_name:
+            return self.last_name.capitalize()
         parts = self.username.replace("_", ".").split(".")
         return parts[1].capitalize() if len(parts) > 1 and parts[1] else ""
 
