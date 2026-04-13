@@ -83,7 +83,7 @@ def detect_anomalies(data: pd.DataFrame, retrain: bool = False) -> pd.DataFrame:
     """Run anomaly detection and attach anomaly predictions to the frame."""
 
     # Train or load model
-    model = train_isolation_forest(data) if retrain else get_or_train_model(data)
+    model = train_model(data) if retrain else get_or_train_model(data)
 
     scoring_frame = data[MODEL_FEATURES].astype(float)
 
@@ -112,16 +112,16 @@ def detect_anomalies(data: pd.DataFrame, retrain: bool = False) -> pd.DataFrame:
 def calculate_risk_score(data: pd.DataFrame) -> pd.Series:
     """Calculate a bounded risk score (0-100) using weights for various behaviors."""
 
-    # Normalizing weights
-    login_comp = np.clip(data["login_frequency"] / 20.0, 0, 1) * 10
-    night_comp = np.clip(data["night_login_count"] / 2.0, 0, 1) * 25
-    after_hours_comp = np.clip(data["after_hours_activity"] / 5.0, 0, 1) * 15
-    file_comp = np.clip(data["file_access_count"] / 30.0, 0, 1) * 20
-    email_comp = np.clip(data["email_activity_count"] / 50.0, 0, 1) * 15
-    usb_comp = np.clip(data["usb_usage_count"] / 1.0, 0, 1) * 15
+    # Normalizing weights (safely handling missing columns)
+    login_comp = np.clip(data.get("login_frequency", pd.Series(0, index=data.index)) / 20.0, 0, 1) * 10
+    night_comp = np.clip(data.get("night_login_count", pd.Series(0, index=data.index)) / 2.0, 0, 1) * 25
+    after_hours_comp = np.clip(data.get("after_hours_activity", pd.Series(0, index=data.index)) / 5.0, 0, 1) * 15
+    file_comp = np.clip(data.get("file_access_count", pd.Series(0, index=data.index)) / 30.0, 0, 1) * 20
+    email_comp = np.clip(data.get("email_activity_count", pd.Series(0, index=data.index)) / 50.0, 0, 1) * 15
+    usb_comp = np.clip(data.get("usb_usage_count", pd.Series(0, index=data.index)) / 1.0, 0, 1) * 15
 
     # Base anomaly score influence
-    anomaly_bonus = np.clip(data["anomaly_score"] * 50, 0, 10) if "anomaly_score" in data else 0
+    anomaly_bonus = np.clip(data.get("anomaly_score", 0) * 50, 0, 10)
 
     risk_score = (
         login_comp

@@ -87,35 +87,35 @@ def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
 
         df["hour"] = df["timestamp"].dt.hour.fillna(0)
 
-        # After-hours activity (before 9 or after 6)
+        # After-hours activity (before 9 or after 18)
         df["after_hours_activity"] = df["hour"].apply(
             lambda x: 1 if x < 9 or x > 18 else 0
         )
 
+        # Night login activity (between 0 and 5 AM)
+        df["is_night"] = df["hour"].apply(
+            lambda x: 1 if 0 <= x <= 5 else 0
+        )
+
     # --------------------------
-    # Default Feature Handling
+    # Aggregate Features per User
     # --------------------------
-    if "login_frequency" not in df.columns:
-        if "user_id" in df.columns:
+    if "user_id" in df.columns:
+        # Calculate frequencies if the columns don't exist yet
+        if "login_frequency" not in df.columns:
             df["login_frequency"] = df.groupby("user_id")["user_id"].transform("count")
-        else:
-            df["login_frequency"] = 1
-
-    if "file_access_count" not in df.columns:
-        df["file_access_count"] = 0
-
-    if "after_hours_activity" not in df.columns:
-        df["after_hours_activity"] = 0
+        
+        if "night_login_count" not in df.columns and "is_night" in df.columns:
+            df["night_login_count"] = df.groupby("user_id")["is_night"].transform("sum")
 
     # --------------------------
-    # Ensure Required Features
+    # Default Feature Handling & Initialization
     # --------------------------
     for feature in MODEL_FEATURES:
         if feature not in df.columns:
             df[feature] = 0
-
-    for feature in MODEL_FEATURES:
-        df[feature] = df[feature].astype(float)
+        # Replace NaN with 0 for all model features
+        df[feature] = df[feature].fillna(0).astype(float)
 
     return df
 

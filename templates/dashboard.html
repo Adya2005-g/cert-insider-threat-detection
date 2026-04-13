@@ -607,31 +607,7 @@
             </div>
         </section>
 
-        <section class="panel" style="margin-bottom: 24px;">
-            <div class="section-head">
-                <div>
-                    <div class="eyebrow">Module Description</div>
-                    <h3>Synopsis-Aligned System Modules</h3>
-                </div>
-            </div>
-            <div class="module-grid">
-                {% for module in modules %}
-                <article class="module-card">
-                    <div class="module-head">
-                        <div class="module-title">
-                            <div class="module-icon"><i class="fas {{ module.icon }}"></i></div>
-                            <div>
-                                <strong>{{ module.name }}</strong>
-                                <div class="meta">{{ module.status }}</div>
-                            </div>
-                        </div>
-                        <span class="status-pill">{{ module.status }}</span>
-                    </div>
-                    <p>{{ module.detail }}</p>
-                </article>
-                {% endfor %}
-            </div>
-        </section>
+
 
         <section class="lower-grid">
             <div class="panel">
