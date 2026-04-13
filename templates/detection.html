@@ -1,234 +1,154 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Threat Detection</title>
-    <style>
-        :root {
-            --primary-green: #16a34a;
-            --primary-dark: #166534;
-            --danger-soft: #fee2e2;
-            --danger-text: #991b1b;
-            --surface: #ffffff;
-            --page: #f8fafc;
-            --text: #0f172a;
-            --muted: #475569;
-            --border: #cbd5e1;
-        }
+{% block title %}User Analysis | CERT Insider Detection{% endblock %}
 
-        body {
-            font-family: "Segoe UI", sans-serif;
-            background: var(--page);
-            color: var(--text);
-            margin: 0;
-            padding: 32px 16px;
-        }
+{% block extra_css %}
+    .card {
+        max-width: 920px;
+        background: var(--white);
+        border-radius: 28px;
+        padding: 32px;
+        border: 1px solid var(--slate-200);
+        box-shadow: 0 22px 50px rgba(15, 23, 42, 0.07);
+    }
 
-        .container {
-            max-width: 720px;
-            margin: 0 auto;
-            background: var(--surface);
-            border-radius: 20px;
-            padding: 32px;
-            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
-        }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-top: 24px;
+    }
 
-        h2 {
-            margin-top: 0;
-        }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
 
-        .flash {
-            padding: 12px 14px;
-            border-radius: 10px;
-            margin-bottom: 18px;
-            background: var(--danger-soft);
-            color: var(--danger-text);
-        }
+    .form-group label {
+        font-weight: 700;
+        color: var(--slate-700);
+        font-size: 0.9rem;
+    }
 
-        .grid {
-            display: grid;
-            gap: 18px;
-        }
+    .form-group input {
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--slate-200);
+        background: var(--bg);
+        font-size: 1rem;
+    }
 
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 13px 22px;
+        border-radius: 14px;
+        text-decoration: none;
+        border: none;
+        font-size: 1rem;
+        cursor: pointer;
+        font-weight: 700;
+        margin-top: 18px;
+    }
 
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
+    .btn-primary {
+        background: var(--green-600);
+        color: #fff;
+    }
 
-        .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 24px;
-        }
+    .results-panel {
+        margin-top: 28px;
+        padding: 24px;
+        border-radius: 22px;
+        background: var(--green-50);
+        border: 1px solid #d8f5df;
+    }
 
-        .button,
-        .link-button {
-            border: none;
-            border-radius: 10px;
-            padding: 12px 18px;
-            text-decoration: none;
-            cursor: pointer;
-            font-size: 1rem;
-        }
+    .result-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(22, 101, 52, 0.1);
+    }
 
-        .button {
-            background: var(--primary-green);
-            color: #fff;
-        }
+    .result-item:last-child {
+        border-bottom: none;
+    }
 
-        .link-button {
-            background: #e2e8f0;
-            color: var(--text);
-        }
+    .result-value {
+        font-weight: 800;
+        color: var(--green-700);
+    }
 
-        .note {
-            margin-top: 20px;
-            color: var(--muted);
-        }
+    .tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 800;
+    }
 
-        .result-card {
-            margin-top: 28px;
-            padding: 20px;
-            border-radius: 16px;
-            border: 1px solid #dcfce7;
-            background: #f0fdf4;
-        }
+    .tag.threat { background: #fee2e2; color: #991b1b; }
+    .tag.normal { background: #dcfce7; color: #166534; }
+{% endblock %}
 
-        .result-card h3 {
-            margin-bottom: 12px;
-            color: var(--primary-dark);
-        }
-
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-        }
-
-        .metric {
-            padding: 14px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.8);
-        }
-
-        .metric span {
-            display: block;
-            font-size: 0.85rem;
-            color: var(--muted);
-            margin-bottom: 6px;
-        }
-
-        .metric strong {
-            font-size: 1.1rem;
-        }
-
-        .helper {
-            margin-top: 10px;
-            color: var(--muted);
-            font-size: 0.95rem;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <h2>User Analysis</h2>
-        <p>Review a single employee profile using the same model features used in batch detection.</p>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="flash">{{ message }}</div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
+{% block content %}
+    <div class="card">
+        <div class="eyebrow">Behavior Profiling Module</div>
+        <h2>Manual User Behavior Analysis</h2>
+        <p>Input behavioral feature counts for a specific user to test the anomaly detection model and risk scoring algorithm in isolation.</p>
 
         <form method="POST" action="{{ url_for('predict') }}">
-            <div class="grid">
-                <div>
-                    <label for="login_frequency">Login Frequency</label>
-                    <input type="number" step="any" min="0" id="login_frequency" name="login_frequency" required
-                        value="{{ analysis.login_frequency if analysis else '' }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Login Frequency</label>
+                    <input type="number" name="login_frequency" step="0.1" value="{{ analysis.login_frequency if analysis else 0 }}" required>
                 </div>
-
-                <div>
-                    <label for="night_login_count">Night Activity (12AM - 6AM)</label>
-                    <input type="number" step="any" min="0" id="night_login_count" name="night_login_count" required
-                        value="{{ analysis.night_login_count if analysis else '0' }}">
+                <div class="form-group">
+                    <label>After-Hours Activity (Count)</label>
+                    <input type="number" name="after_hours_activity" value="{{ analysis.after_hours_activity if analysis else 0 }}" required>
                 </div>
-
-                <div>
-                    <label for="after_hours_activity">After-hours Activity (9PM - 9AM)</label>
-                    <input type="number" min="0" max="1" id="after_hours_activity" name="after_hours_activity" required
-                        value="{{ analysis.after_hours_activity if analysis else '0' }}">
+                <div class="form-group">
+                    <label>Night Login Count</label>
+                    <input type="number" name="night_login_count" value="{{ analysis.night_login_count if analysis else 0 }}" required>
                 </div>
-
-                <div>
-                    <label for="file_access_count">File Access Count</label>
-                    <input type="number" step="any" min="0" id="file_access_count" name="file_access_count" required
-                        value="{{ analysis.file_access_count if analysis else '0' }}">
+                <div class="form-group">
+                    <label>File Access Count</label>
+                    <input type="number" name="file_access_count" value="{{ analysis.file_access_count if analysis else 0 }}" required>
                 </div>
-
-                <div>
-                    <label for="email_activity_count">Email Count</label>
-                    <input type="number" step="any" min="0" id="email_activity_count" name="email_activity_count" required
-                        value="{{ analysis.email_activity_count if analysis else '0' }}">
+                <div class="form-group">
+                    <label>Email Activity Count</label>
+                    <input type="number" name="email_activity_count" value="{{ analysis.email_activity_count if analysis else 0 }}" required>
                 </div>
-
-                <div>
-                    <label for="usb_usage_count">USB Usage Count</label>
-                    <input type="number" step="any" min="0" id="usb_usage_count" name="usb_usage_count" required
-                        value="{{ analysis.usb_usage_count if analysis else '0' }}">
+                <div class="form-group">
+                    <label>USB Usage Count</label>
+                    <input type="number" name="usb_usage_count" value="{{ analysis.usb_usage_count if analysis else 0 }}" required>
                 </div>
             </div>
-
-            <div class="actions">
-                <button class="button" type="submit">Analyze User</button>
-                <a class="link-button" href="{{ url_for('upload') }}">Upload CSV Instead</a>
-                <a class="link-button" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
-            </div>
+            <button type="submit" class="btn btn-primary">Run Manual Detection</button>
         </form>
 
-        <p class="note">Use `0` for normal-hours behavior and `1` for after-hours activity.</p>
-
         {% if analysis %}
-        <section class="result-card">
-            <h3>Analysis Result</h3>
-            <div class="result-grid">
-                <div class="metric">
-                    <span>Detection</span>
-                    <strong>{{ analysis.detection }}</strong>
-                </div>
-                <div class="metric">
-                    <span>Threat Level</span>
-                    <strong>{{ analysis.threat_level }}</strong>
-                </div>
-                <div class="metric">
-                    <span>Risk Score</span>
-                    <strong>{{ analysis.risk_score }}</strong>
-                </div>
-                <div class="metric">
-                    <span>Anomaly Score</span>
-                    <strong>{{ analysis.anomaly_score }}</strong>
-                </div>
+        <div class="results-panel">
+            <h3>Detection Results</h3>
+            <div class="result-item">
+                <span>Model Decision:</span>
+                <span class="tag {{ 'threat' if analysis.detection == 'Threat' else 'normal' }}">{{ analysis.detection }}</span>
             </div>
-            <p class="helper">Higher risk and anomaly scores indicate behavior farther from the learned baseline.</p>
-        </section>
+            <div class="result-item">
+                <span>Calculated Risk Score:</span>
+                <span class="result-value">{{ analysis.risk_score }} / 100</span>
+            </div>
+            <div class="result-item">
+                <span>Threat Classification:</span>
+                <span class="result-value">{{ analysis.threat_level }}</span>
+            </div>
+            <div class="result-item">
+                <span>Raw Anomaly Score:</span>
+                <span class="result-value">{{ analysis.anomaly_score }}</span>
+            </div>
+        </div>
         {% endif %}
     </div>
-</body>
-
-</html>
+{% endblock %}

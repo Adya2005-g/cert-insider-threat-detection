@@ -1,225 +1,114 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile Settings | CERT Insider Detection</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --green-600: #16a34a;
-            --green-700: #15803d;
-            --slate-950: #0f172a;
-            --slate-700: #334155;
-            --slate-500: #64748b;
-            --slate-200: #e2e8f0;
-            --bg: #f8fafc;
-            --white: #ffffff;
-        }
+{% block title %}Profile Settings | CERT Insider Detection{% endblock %}
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: "Plus Jakarta Sans", sans-serif;
-        }
+{% block extra_css %}
+    .profile-card {
+        max-width: 800px;
+        background: var(--white);
+        border: 1px solid var(--slate-200);
+        border-radius: 28px;
+        padding: 32px;
+        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.05);
+    }
 
-        body {
-            background-color: var(--bg);
-            color: var(--slate-950);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-        }
+    .form-section {
+        margin-top: 24px;
+        display: grid;
+        gap: 20px;
+    }
 
-        .profile-container {
-            width: 100%;
-            max-width: 600px;
-            background: var(--white);
-            border: 1px solid var(--slate-200);
-            border-radius: 28px;
-            padding: 40px;
-            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-        }
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
 
-        .header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
 
-        .avatar-large {
-            width: 80px;
-            height: 80px;
-            border-radius: 24px;
-            background: linear-gradient(135deg, var(--green-600), var(--green-700));
-            color: var(--white);
-            display: grid;
-            place-items: center;
-            font-size: 2rem;
-            font-weight: 800;
-            margin: 0 auto 16px;
-        }
+    .form-group label {
+        font-weight: 700;
+        color: var(--slate-700);
+        font-size: 0.9rem;
+    }
 
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-        }
+    .form-group input {
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--slate-200);
+        background: var(--bg);
+        font-size: 1rem;
+    }
 
-        .subtitle {
-            color: var(--slate-500);
-            font-size: 0.95rem;
-        }
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 13px 22px;
+        border-radius: 14px;
+        text-decoration: none;
+        border: none;
+        font-size: 1rem;
+        cursor: pointer;
+        font-weight: 700;
+        margin-top: 24px;
+    }
 
-        .flash {
-            padding: 14px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            text-align: center;
-            font-weight: 600;
-        }
+    .btn-primary {
+        background: var(--green-600);
+        color: #fff;
+    }
 
-        .flash.success {
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #d1fae5;
-        }
+    .avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 24px;
+        background: linear-gradient(135deg, var(--green-500), var(--green-700));
+        color: white;
+        display: grid;
+        place-items: center;
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 20px;
+    }
+{% endblock %}
 
-        .flash.error {
-            background: #fef2f2;
-            color: #991b1b;
-            border: 1px solid #fee2e2;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--slate-700);
-            font-size: 0.9rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--slate-200);
-            font-size: 1rem;
-            transition: 0.2s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--green-600);
-            box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.1);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        .actions {
-            margin-top: 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border-radius: 14px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            text-decoration: none;
-            text-align: center;
-            transition: 0.2s;
-            border: none;
-        }
-
-        .btn-primary {
-            background: var(--green-600);
-            color: var(--white);
-        }
-
-        .btn-primary:hover {
-            background: var(--green-700);
-        }
-
-        .btn-secondary {
-            background: var(--bg);
-            color: var(--slate-700);
-            border: 1px solid var(--slate-200);
-        }
-
-        .btn-secondary:hover {
-            background: var(--slate-200);
-        }
-
-        .password-note {
-            font-size: 0.82rem;
-            color: var(--slate-500);
-            margin-top: 6px;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="profile-container">
-        <div class="header">
-            <div class="avatar-large">{{ user.fname[:1] }}{{ user.lname[:1] }}</div>
-            <h1>Account Settings</h1>
-            <p class="subtitle">Modify your analyst profile and security credentials.</p>
-        </div>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
+{% block content %}
+    <div class="profile-card">
+        <div class="avatar-large">{{ user.fname[:1] }}{{ user.lname[:1] }}</div>
+        <div class="eyebrow">Analyst Identity Module</div>
+        <h2>Profile Settings</h2>
+        <p>Manage your account information and authentication credentials.</p>
 
         <form method="POST">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="first_name">First Name</label>
-                    <input type="text" id="first_name" name="first_name" value="{{ user.fname }}" required>
+            <div class="form-section">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" name="first_name" value="{{ user.first_name }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" value="{{ user.last_name }}">
+                    </div>
                 </div>
+
                 <div class="form-group">
-                    <label for="last_name">Last Name</label>
-                    <input type="text" id="last_name" name="last_name" value="{{ user.lname }}" required>
+                    <label>Email Address</label>
+                    <input type="email" name="email" value="{{ user.email }}">
+                </div>
+
+                <div class="form-group">
+                    <label>New Password (leave blank to keep current)</label>
+                    <input type="password" name="new_password" placeholder="••••••••">
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="email">Work Email</label>
-                <input type="email" id="email" name="email" value="{{ user.email }}" required>
-            </div>
-
-            <div class="form-group">
-                <label for="new_password">New Password</label>
-                <input type="password" id="new_password" name="new_password" placeholder="Leave blank to keep current">
-                <p class="password-note">Use at least 8 characters with a mix of letters and numbers.</p>
-            </div>
-
-            <div class="actions">
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Discard & Return</a>
-            </div>
+            <button type="submit" class="btn btn-primary">Save Profile Changes</button>
         </form>
     </div>
-</body>
-
-</html>
+{% endblock %}

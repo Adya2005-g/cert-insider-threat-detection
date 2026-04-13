@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CERT Insider Detection{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --green-700: #166534;
+            --green-600: #15803d;
+            --green-500: #22c55e;
+            --green-50: #f0fdf4;
+            --slate-950: #0f172a;
+            --slate-700: #334155;
+            --slate-500: #64748b;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --white: #ffffff;
+            --bg: #f8fafc;
+            --danger: #dc2626;
+            --amber: #f59e0b;
+            --sidebar-width: 270px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Plus Jakarta Sans", sans-serif;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 24%),
+                linear-gradient(180deg, #fcfffd 0%, var(--bg) 40%, #eefbf2 100%);
+            color: var(--slate-950);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--slate-200);
+            padding: 28px 20px;
+            position: fixed;
+            inset: 0 auto 0 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo i {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 14px;
+            color: var(--white);
+            background: linear-gradient(135deg, var(--green-500), var(--green-700));
+        }
+
+        .logo span {
+            color: var(--green-600);
+        }
+
+        .sidebar-copy {
+            color: var(--slate-500);
+            font-size: 0.92rem;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .nav-menu {
+            list-style: none;
+            display: grid;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 14px;
+            border-radius: 14px;
+            text-decoration: none;
+            color: var(--slate-700);
+            font-weight: 600;
+            transition: 0.2s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--green-50);
+            color: var(--green-700);
+        }
+
+        .sidebar-summary {
+            padding: 18px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #f6fff8, #effcf3);
+            border: 1px solid #d8f5df;
+            margin-top: 18px;
+        }
+
+        .sidebar-summary strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .sidebar-summary p {
+            color: var(--slate-500);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+
+        .logout-btn {
+            margin-top: 16px;
+            color: #b91c1c !important;
+            border: 1px solid #fecaca;
+        }
+
+        .logout-btn:hover {
+            background: #fff1f2;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            padding: 32px;
+            min-height: 100vh;
+        }
+
+        .eyebrow {
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--green-600);
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .flash-container {
+            margin-bottom: 24px;
+        }
+
+        .flash {
+            padding: 12px 18px;
+            border-radius: 14px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .flash.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .flash.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+
+<body>
+    {% set active_page = request.endpoint %}
+    <aside class="sidebar">
+        <a href="{{ url_for('dashboard') }}" class="logo">
+            <i class="fas fa-shield-halved"></i>
+            <div>CERT <span>INSIDER</span></div>
+        </a>
+        <p class="sidebar-copy">A synopsis-aligned analyst workspace for ingestion, behavior profiling, anomaly detection, risk scoring, alerts, and reporting.</p>
+
+        <ul class="nav-menu">
+            <li><a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if active_page == 'dashboard' else '' }}"><i class="fas fa-chart-line"></i> Overview</a></li>
+            <li><a href="{{ url_for('detect_view') }}" class="nav-link {{ 'active' if active_page in ['detect_view', 'predict'] else '' }}"><i class="fas fa-users-viewfinder"></i> User Analysis</a></li>
+            <li><a href="{{ url_for('upload') }}" class="nav-link {{ 'active' if active_page == 'upload' else '' }}"><i class="fas fa-file-arrow-up"></i> Data Acquisition</a></li>
+            <li><a href="{{ url_for('results') }}" class="nav-link {{ 'active' if active_page == 'results' else '' }}"><i class="fas fa-triangle-exclamation"></i> Alerts & Reports</a></li>
+            <li><a href="{{ url_for('profile') }}" class="nav-link {{ 'active' if active_page == 'profile' else '' }}"><i class="fas fa-user-gear"></i> Profile Settings</a></li>
+        </ul>
+
+        <div class="sidebar-summary">
+            <strong>Latest Batch</strong>
+            <p>{% if latest_batch_id %}{{ latest_batch_id }}{% else %}No dataset processed yet{% endif %}</p>
+        </div>
+
+        <a href="{{ url_for('logout') }}" class="nav-link logout-btn">
+            <i class="fas fa-right-from-bracket"></i> Logout
+        </a>
+    </aside>
+
+    <main class="main-content">
+        <div class="flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

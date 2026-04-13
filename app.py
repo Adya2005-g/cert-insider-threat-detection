@@ -329,9 +329,13 @@ def create_app(config_object=DevelopmentConfig):
     app.register_blueprint(api_bp, url_prefix="/api")
 
     @app.context_processor
-    def inject_current_user():
+    def inject_common_context():
         user = _current_user()
-        return {"current_user": user or User.anonymous()}
+        batch_id, _ = _latest_batch_logs()
+        return {
+            "current_user": user or User.anonymous(),
+            "latest_batch_id": batch_id
+        }
 
     @app.route("/", methods=["GET"])
     def index():
