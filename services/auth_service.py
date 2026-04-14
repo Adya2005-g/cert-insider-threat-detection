@@ -13,6 +13,6 @@ def authenticate_user(username_or_email: str, password: str):
         (User.username == identifier) | (User.email == identifier)
     ).first()
 
-    if user and check_password_hash(user.password_hash, password):
+    if user and user.check_password(password):
         return user
     return None

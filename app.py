@@ -397,6 +397,8 @@ def create_app(config_object=DevelopmentConfig):
 
     db.init_app(app)
     app.register_blueprint(api_bp, url_prefix="/api")
+    from routes.auth import auth_bp
+    app.register_blueprint(auth_bp, url_prefix="/auth")
 
     @app.context_processor
     def inject_common_context():
@@ -451,11 +453,10 @@ def create_app(config_object=DevelopmentConfig):
 
     @app.route("/forgot-password", methods=["GET", "POST"])
     def forgot_password():
-        email_prefill = session.get("reset_email", "")
+        # GET always starts at Step 1 (Request Email)
+        # POST handle sequence (Request -> Verify -> Reset)
         step = "request"
-
-        if session.get("reset_email") and session.get("reset_code"):
-            step = "verify"
+        email_prefill = session.get("reset_email", "")
 
         if request.method == "POST":
             action = request.form.get("action", "request")
@@ -472,10 +473,15 @@ def create_app(config_object=DevelopmentConfig):
                     flash("No account was found with that email address.", "error")
                     return render_template("forgot_password.html", step="request", email=email)
 
+                import secrets
+                from services.mail_service import send_otp_email
                 code = f"{secrets.randbelow(1000000):06d}"
-                _set_reset_session(email, code)
+                user.set_otp(code)
+                db.session.commit()
+                
+                session["reset_email"] = email
 
-                if _send_reset_code_email(email, code):
+                if send_otp_email(email, code):
                     flash("A verification code has been sent to your email.", "success")
                 else:
                     flash(
@@ -488,31 +494,43 @@ def create_app(config_object=DevelopmentConfig):
             if action == "verify":
                 email = request.form.get("email", "").strip().lower()
                 code = request.form.get("code", "").strip()
+                
+                user = User.query.filter_by(email=email).first()
+                if user and user.verify_otp(code):
+                    session["reset_authorized"] = True
+                    # IMPORTANT: Render Step 3 directly after successful verification
+                    flash("Identity verified. Please set your new password.", "success")
+                    return render_template("forgot_password.html", step="reset", email=email)
+                else:
+                    flash("Invalid or expired verification code.", "error")
+                    return render_template("forgot_password.html", step="verify", email=email)
+
+            if action == "reset":
+                email = request.form.get("email", "").strip().lower()
                 new_password = request.form.get("new_password", "")
                 confirm_password = request.form.get("confirm_password", "")
 
-                if not all([email, code, new_password, confirm_password]):
-                    flash("Please complete all fields to reset your password.", "error")
-                    return render_template("forgot_password.html", step="verify", email=email)
+                if not session.get("reset_authorized"):
+                    flash("Session unauthorized. Please verify your OTP again.", "error")
+                    return render_template("forgot_password.html", step="request", email=email)
 
                 if new_password != confirm_password:
-                    flash("New password and confirm password must match.", "error")
-                    return render_template("forgot_password.html", step="verify", email=email)
-
-                if not _reset_session_valid(email, code):
-                    flash("The verification code is invalid or has expired. Please request a new code.", "error")
-                    return render_template("forgot_password.html", step="request", email=email)
+                    flash("Passwords must match.", "error")
+                    return render_template("forgot_password.html", step="reset", email=email)
 
                 user = User.query.filter_by(email=email).first()
-                if user is None:
-                    _clear_reset_session()
-                    flash("No account was found with that email address.", "error")
+                if not user:
+                    flash("User not found.", "error")
                     return render_template("forgot_password.html", step="request", email=email)
 
-                user.password_hash = generate_password_hash(new_password)
+                user.set_password(new_password)
+                user.otp_hash = None
+                user.otp_expiry = None
                 db.session.commit()
-                _clear_reset_session()
-                flash("Your password has been reset. Sign in with your new password.", "success")
+                
+                session.pop("reset_email", None)
+                session.pop("reset_authorized", None)
+                flash("Password reset successfully. Please login with your new credentials.", "success")
                 return redirect(url_for("login_page"))
 
         return render_template("forgot_password.html", step=step, email=email_prefill)
@@ -542,11 +560,11 @@ def create_app(config_object=DevelopmentConfig):
             user = User(
                 username=username,
                 email=email,
-                password_hash=generate_password_hash(password),
                 first_name=first_name,
                 last_name=last_name,
                 role="analyst",
             )
+            user.set_password(password)
             db.session.add(user)
             db.session.commit()
 
@@ -582,7 +600,7 @@ def create_app(config_object=DevelopmentConfig):
                     user.email = email
             
             if new_password:
-                user.password_hash = generate_password_hash(new_password)
+                user.set_password(new_password)
             
             db.session.commit()
             flash("Profile updated successfully.", "success")
@@ -773,7 +791,9 @@ def create_app(config_object=DevelopmentConfig):
             # User migration
             new_user_columns = [
                 ("first_name", "VARCHAR(100)"),
-                ("last_name", "VARCHAR(100)")
+                ("last_name", "VARCHAR(100)"),
+                ("otp_hash", "VARCHAR(255)"),
+                ("otp_expiry", "DATETIME")
             ]
             for col_name, col_type in new_user_columns:
                 try:

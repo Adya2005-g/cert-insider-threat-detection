@@ -16,8 +16,49 @@ class User(db.Model):
     last_name = db.Column(db.String(100), nullable=True)
     role = db.Column(db.String(50), nullable=False, default="analyst")
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+    
+    otp_hash = db.Column(db.String(255), nullable=True)
+    otp_expiry = db.Column(db.DateTime, nullable=True)
 
     logs = db.relationship("Log", back_populates="user", lazy=True)
+
+    def set_password(self, password):
+        """Hash password using bcrypt."""
+        import bcrypt
+        salt = bcrypt.gensalt()
+        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+    def check_password(self, password):
+        """Check password using bcrypt with fallback to werkzeug."""
+        import bcrypt
+        from werkzeug.security import check_password_hash
+        
+        # Try bcrypt first
+        try:
+            if bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8')):
+                return True
+        except Exception:
+            # Fallback to werkzeug for legacy hashes
+            return check_password_hash(self.password_hash, password)
+        return False
+
+    def set_otp(self, otp):
+        """Hash and store OTP with expiry."""
+        import bcrypt
+        from datetime import datetime, timedelta
+        salt = bcrypt.gensalt()
+        self.otp_hash = bcrypt.hashpw(otp.encode('utf-8'), salt).decode('utf-8')
+        self.otp_expiry = datetime.utcnow() + timedelta(minutes=5)
+
+    def verify_otp(self, otp):
+        """Verify OTP hash and check expiry."""
+        import bcrypt
+        from datetime import datetime
+        if not self.otp_hash or not self.otp_expiry:
+            return False
+        if datetime.utcnow() > self.otp_expiry:
+            return False
+        return bcrypt.checkpw(otp.encode('utf-8'), self.otp_hash.encode('utf-8'))
 
     @property
     def fname(self):
