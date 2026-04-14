@@ -341,9 +341,9 @@
 {% block content %}
         <header>
             <div>
-                <div class="eyebrow">Visualization Dashboard Module</div>
+                <div class="eyebrow">Visualization Dashboard</div>
                 <h1>Insider Threat Operations Dashboard</h1>
-                <p>The current workspace follows the synopsis pipeline: collect logs, clean and integrate activity, engineer features, build user profiles, score anomalies, classify threats, and surface analyst-ready alerts and reports.</p>
+                <p>The current workspace follows the pipeline: collect logs, clean and integrate activity, engineer features, build user profiles, score anomalies, classify threats, and surface analyst-ready alerts and reports.</p>
             </div>
             <a href="{{ url_for('profile') }}" class="user-profile" style="text-decoration: none; color: inherit;">
                 <div class="avatar">{{ current_user.fname[:1] }}{{ current_user.lname[:1] }}</div>
@@ -357,7 +357,7 @@
         <section class="hero">
             <div class="hero-card">
                 <div class="hero-orb"></div>
-                <div class="eyebrow" style="color: rgba(255,255,255,0.75);">Real-time Monitoring Module</div>
+                <div class="eyebrow" style="color: rgba(255,255,255,0.75);">Real-time Monitoring</div>
                 <h2>Track risky employee behavior across acquisition, scoring, and alert generation</h2>
                 <p>Use manual detection for single-user reviews, upload a CSV to run the full CERT-style batch pipeline, and inspect the latest alerts and summaries directly from the dashboard.</p>
                 <div class="hero-actions">
@@ -409,7 +409,7 @@
             <div class="panel">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">Phase 6: Anomaly Detection</div>
+                        <div class="eyebrow">Anomaly Detection</div>
                         <h3>Threat Distribution</h3>
                     </div>
                 </div>
@@ -420,7 +420,7 @@
             <div class="panel">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">Phase 7: Risk Scoring</div>
+                        <div class="eyebrow">Risk Scoring</div>
                         <h3>Risk Level Analysis</h3>
                     </div>
                 </div>
@@ -435,7 +435,7 @@
             <div class="panel">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">Alert & Report Module</div>
+                        <div class="eyebrow">Alert & Report</div>
                         <h3>Recent Threat Alerts</h3>
                     </div>
                     <a href="{{ url_for('results') }}">Open full report</a>

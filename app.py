@@ -1,6 +1,10 @@
+from datetime import datetime, timedelta
+from email.message import EmailMessage
 from functools import wraps
 import logging
 import os
+import secrets
+import smtplib
 from uuid import uuid4
 
 import joblib
@@ -39,6 +43,72 @@ from utils.seed import seed_default_user
 logging.basicConfig(level=logging.INFO)
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pkl")
 _pipeline_model = None
+
+
+def _send_reset_code_email(recipient: str, code: str) -> bool:
+    smtp_host = os.environ.get("MAIL_SERVER")
+    smtp_port = int(os.environ.get("MAIL_PORT", "587"))
+    smtp_username = os.environ.get("MAIL_USERNAME")
+    smtp_password = os.environ.get("MAIL_PASSWORD")
+    sender = os.environ.get("MAIL_DEFAULT_SENDER", smtp_username or "no-reply@example.com")
+    use_tls = os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
+
+    if not smtp_host or not sender:
+        return False
+
+    message = EmailMessage()
+    message["Subject"] = "Your CERT Insider password reset code"
+    message["From"] = sender
+    message["To"] = recipient
+    message.set_content(
+        f"Use this verification code to reset your password: {code}\n\n"
+        "This code will expire in 10 minutes."
+    )
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+            if use_tls:
+                server.starttls()
+            if smtp_username and smtp_password:
+                server.login(smtp_username, smtp_password)
+            server.send_message(message)
+        return True
+    except Exception as exc:
+        logging.error("Failed to send password reset email: %s", exc)
+        return False
+
+
+def _clear_reset_session():
+    session.pop("reset_email", None)
+    session.pop("reset_code", None)
+    session.pop("reset_code_expires_at", None)
+
+
+def _set_reset_session(email: str, code: str):
+    session["reset_email"] = email
+    session["reset_code"] = code
+    session["reset_code_expires_at"] = (datetime.utcnow() + timedelta(minutes=10)).isoformat()
+
+
+def _reset_session_valid(email: str, code: str) -> bool:
+    stored_email = session.get("reset_email")
+    stored_code = session.get("reset_code")
+    expires_at = session.get("reset_code_expires_at")
+
+    if not stored_email or not stored_code or not expires_at:
+        return False
+
+    try:
+        expiry = datetime.fromisoformat(expires_at)
+    except ValueError:
+        _clear_reset_session()
+        return False
+
+    if datetime.utcnow() > expiry:
+        _clear_reset_session()
+        return False
+
+    return stored_email == email and stored_code == code
 
 
 def _build_username(first_name: str, last_name: str, email: str) -> str:
@@ -378,6 +448,74 @@ def create_app(config_object=DevelopmentConfig):
             return redirect(url_for("dashboard"))
 
         return render_template("login.html")
+
+    @app.route("/forgot-password", methods=["GET", "POST"])
+    def forgot_password():
+        email_prefill = session.get("reset_email", "")
+        step = "request"
+
+        if session.get("reset_email") and session.get("reset_code"):
+            step = "verify"
+
+        if request.method == "POST":
+            action = request.form.get("action", "request")
+
+            if action == "request":
+                email = request.form.get("email", "").strip().lower()
+                user = User.query.filter_by(email=email).first()
+
+                if not email:
+                    flash("Please enter your registered email address.", "error")
+                    return render_template("forgot_password.html", step="request", email=email)
+
+                if user is None:
+                    flash("No account was found with that email address.", "error")
+                    return render_template("forgot_password.html", step="request", email=email)
+
+                code = f"{secrets.randbelow(1000000):06d}"
+                _set_reset_session(email, code)
+
+                if _send_reset_code_email(email, code):
+                    flash("A verification code has been sent to your email.", "success")
+                else:
+                    flash(
+                        f"Email delivery is not configured, so your demo verification code is {code}.",
+                        "success",
+                    )
+
+                return render_template("forgot_password.html", step="verify", email=email)
+
+            if action == "verify":
+                email = request.form.get("email", "").strip().lower()
+                code = request.form.get("code", "").strip()
+                new_password = request.form.get("new_password", "")
+                confirm_password = request.form.get("confirm_password", "")
+
+                if not all([email, code, new_password, confirm_password]):
+                    flash("Please complete all fields to reset your password.", "error")
+                    return render_template("forgot_password.html", step="verify", email=email)
+
+                if new_password != confirm_password:
+                    flash("New password and confirm password must match.", "error")
+                    return render_template("forgot_password.html", step="verify", email=email)
+
+                if not _reset_session_valid(email, code):
+                    flash("The verification code is invalid or has expired. Please request a new code.", "error")
+                    return render_template("forgot_password.html", step="request", email=email)
+
+                user = User.query.filter_by(email=email).first()
+                if user is None:
+                    _clear_reset_session()
+                    flash("No account was found with that email address.", "error")
+                    return render_template("forgot_password.html", step="request", email=email)
+
+                user.password_hash = generate_password_hash(new_password)
+                db.session.commit()
+                _clear_reset_session()
+                flash("Your password has been reset. Sign in with your new password.", "success")
+                return redirect(url_for("login_page"))
+
+        return render_template("forgot_password.html", step=step, email=email_prefill)
 
     @app.route("/register", methods=["GET", "POST"])
     def register_page():
