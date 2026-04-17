@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}User Analysis | CERT Insider Detection{% endblock %}
+
+{% block extra_css %}
+    .analysis-shell {
+        max-width: 980px;
+        display: grid;
+        gap: 24px;
+    }
+
+    .panel-card {
+        background: var(--white);
+        border-radius: 28px;
+        padding: 32px;
+        border: 1px solid var(--slate-200);
+        box-shadow: 0 22px 50px rgba(15, 23, 42, 0.07);
+    }
+
+    .panel-card p {
+        color: var(--slate-500);
+        line-height: 1.6;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-group label {
+        font-weight: 700;
+        color: var(--slate-700);
+        font-size: 0.95rem;
+    }
+
+    .form-group input {
+        padding: 14px 18px;
+        border-radius: 16px;
+        border: 1px solid var(--slate-200);
+        background: var(--bg);
+        font-size: 1rem;
+        outline: none;
+    }
+
+    .form-group input:focus {
+        border-color: var(--green-500);
+        background: #fcfffd;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 22px;
+        padding: 14px 24px;
+        border: none;
+        border-radius: 16px;
+        background: var(--green-600);
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .result-card {
+        border-left: 6px solid;
+    }
+
+    .result-card.success {
+        border-left-color: #16a34a;
+        background: #f0fdf4;
+    }
+
+    .result-card.warning {
+        border-left-color: #f59e0b;
+        background: #fff7ed;
+    }
+
+    .result-card.danger {
+        border-left-color: #dc2626;
+        background: #fef2f2;
+    }
+
+    .result-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+        margin-bottom: 22px;
+    }
+
+    .metric-box {
+        padding: 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .metric-box span {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--slate-500);
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .metric-box strong {
+        font-size: 1.35rem;
+        color: var(--slate-950);
+    }
+
+    .rule-list {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--slate-700);
+        line-height: 1.8;
+    }
+
+    .recommendation {
+        margin-top: 18px;
+        padding: 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .recommendation strong {
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    @media (max-width: 900px) {
+        .form-grid,
+        .result-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+{% endblock %}
+
+{% block content %}
+    {% set safe_form = form_data | default({}, true) %}
+
+    <div class="analysis-shell">
+        <section class="panel-card">
+            <div class="eyebrow">Behavior Profiling</div>
+            <h2>Manual User Behavior Analysis</h2>
+            <p>Input behavioral feature counts for a specific user and evaluate suspicious behavior with rule-based logic, risk scoring, and recommended analyst action.</p>
+
+            <form method="POST" action="{{ url_for('manual_detect.manual_detect') }}">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="login_frequency">Login Frequency</label>
+                        <input id="login_frequency" type="number" min="0" step="1" name="login_frequency" value="{{ safe_form.login_frequency | default(0, true) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="after_hours_count">After-Hours Activity Count</label>
+                        <input id="after_hours_count" type="number" min="0" step="1" name="after_hours_count" value="{{ safe_form.after_hours_count | default(0, true) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="night_login_count">Night Login Count</label>
+                        <input id="night_login_count" type="number" min="0" step="1" name="night_login_count" value="{{ safe_form.night_login_count | default(0, true) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="file_access_count">File Access Count</label>
+                        <input id="file_access_count" type="number" min="0" step="1" name="file_access_count" value="{{ safe_form.file_access_count | default(0, true) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email_activity_count">Email Activity Count</label>
+                        <input id="email_activity_count" type="number" min="0" step="1" name="email_activity_count" value="{{ safe_form.email_activity_count | default(0, true) }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="usb_usage_count">USB Usage Count</label>
+                        <input id="usb_usage_count" type="number" min="0" step="1" name="usb_usage_count" value="{{ safe_form.usb_usage_count | default(0, true) }}" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Run Manual Detection</button>
+            </form>
+        </section>
+
+        {% if analysis %}
+        <section class="panel-card result-card {{ analysis.color_class }}">
+            <div class="eyebrow">Detection Result</div>
+            <h3>Manual Behavior Risk Assessment</h3>
+            <p>The submitted behavior indicators have been evaluated against insider threat rules and weighted risk scoring.</p>
+
+            <div class="result-grid">
+                <div class="metric-box">
+                    <span>Threat Status</span>
+                    <strong>{{ analysis.threat_status }}</strong>
+                </div>
+                <div class="metric-box">
+                    <span>Severity</span>
+                    <strong>{{ analysis.severity }}</strong>
+                </div>
+                <div class="metric-box">
+                    <span>Risk Score</span>
+                    <strong>{{ analysis.risk_score }} / 100</strong>
+                </div>
+            </div>
+
+            <div class="metric-box">
+                <span>Triggered Rules</span>
+                {% if analysis.triggered_rules %}
+                <ul class="rule-list">
+                    {% for rule in analysis.triggered_rules %}
+                    <li>{{ rule }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>No suspicious rules triggered.</p>
+                {% endif %}
+            </div>
+
+            <div class="recommendation">
+                <strong>Recommended Action</strong>
+                <p>{{ analysis.recommended_action }}</p>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+{% endblock %}

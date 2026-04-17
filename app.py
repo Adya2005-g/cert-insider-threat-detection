@@ -18,6 +18,7 @@ from models.log import Log
 from models.risk_score import RiskScore
 from models.user import User
 from routes.api import api_bp
+from routes.manual_detect import manual_detect_bp
 from services.anomaly_detection import detect_anomalies as detect_pipeline_anomalies
 from services.data_pipeline import feature_engineering as batch_feature_engineering
 from services.data_pipeline import load_csv_dataset
@@ -27,6 +28,7 @@ from services.behavior_profile import create_user_profile
 from services.classification import classify_threat as classify_pipeline_threat
 from services.data_loader import load_data
 from services.evaluate_model import evaluate
+from services.email_insider_detection import analyze_email_dataset, is_email_dataset
 from services.feature_engineering import feature_engineering
 from services.log_integration import merge_logs
 from services.monitoring import monitor
@@ -223,6 +225,21 @@ def _serialize_dashboard_alert(alert: Alert) -> dict:
 def _serialize_result_row(log: Log) -> dict:
     user = log.user.username if log.user else str(log.user_id)
     score = log.risk_score.score if log.risk_score else 0.0
+    raw_record = log.raw_record or {}
+    if raw_record.get("source_type") == "email_insider":
+        return {
+            "user": user,
+            "date": raw_record.get("date", ""),
+            "attachments": int(float(raw_record.get("attachments", 0) or 0)),
+            "size": round(float(raw_record.get("size", 0) or 0), 2),
+            "threat_status": raw_record.get("threat_status", "Threat" if log.anomaly_flag else "Normal"),
+            "severity": raw_record.get("severity", str(log.threat_level).title()),
+            "triggered_rule": raw_record.get("triggered_rule", "No suspicious activity"),
+            "risk_score": round(float(score), 2),
+            "status": "Threat" if log.anomaly_flag else "Normal",
+            "threat_level": str(log.threat_level).title(),
+            "source_type": "email_insider",
+        }
     return {
         "user": user,
         "login_frequency": round(float(log.login_frequency), 2),
@@ -234,6 +251,61 @@ def _serialize_result_row(log: Log) -> dict:
         "threat_level": str(log.threat_level).title(),
         "risk_score": round(float(score), 2),
         "status": "Threat" if log.anomaly_flag else "Normal",
+    }
+
+
+def _build_email_results_payload(logs: list[Log]) -> dict:
+    rows = [_serialize_result_row(log) for log in logs]
+    threat_rows = [row for row in rows if row.get("threat_status", row.get("status")) == "Threat"]
+    normal_rows = [row for row in rows if row.get("threat_status", row.get("status")) == "Normal"]
+    critical_rows = [row for row in rows if row.get("severity") == "Critical"]
+
+    user_threat_counts: dict[str, int] = {}
+    hourly_activity = {str(hour).zfill(2): 0 for hour in range(24)}
+    attachment_analysis = {"Attachment Threats": 0, "Non-Attachment Threats": 0}
+
+    for log in logs:
+        raw = log.raw_record or {}
+        if raw.get("threat_status") != "Threat":
+            continue
+
+        user_label = log.user.username if log.user else str(log.user_id)
+        user_threat_counts[user_label] = user_threat_counts.get(user_label, 0) + 1
+
+        hour_value = raw.get("hour")
+        if hour_value is not None:
+            try:
+                hourly_activity[str(int(hour_value)).zfill(2)] += 1
+            except (TypeError, ValueError):
+                pass
+
+        try:
+            if float(raw.get("attachments", 0) or 0) > 0:
+                attachment_analysis["Attachment Threats"] += 1
+            else:
+                attachment_analysis["Non-Attachment Threats"] += 1
+        except (TypeError, ValueError):
+            attachment_analysis["Non-Attachment Threats"] += 1
+
+    summary = {
+        "Total Emails": len(rows),
+        "Threat Emails": len(threat_rows),
+        "Normal Emails": len(normal_rows),
+        "Critical Alerts": len(critical_rows),
+    }
+
+    return {
+        "summary": summary,
+        "rows": rows,
+        "charts": {
+            "threat_vs_normal": {
+                "Threat": len(threat_rows),
+                "Normal": len(normal_rows),
+            },
+            "user_threat_count": user_threat_counts,
+            "hourly_suspicious_activity": hourly_activity,
+            "attachment_threat_analysis": attachment_analysis,
+        },
     }
 
 
@@ -304,6 +376,10 @@ def _dashboard_context():
         elif score >= 30: risk_buckets["Medium"] += 1
         else: risk_buckets["Low"] += 1
 
+    latest_batch_source_type = ""
+    if batch_logs:
+        latest_batch_source_type = (batch_logs[0].raw_record or {}).get("source_type", "")
+
     return {
         "stats": {
             "users_monitored": user_count,
@@ -323,11 +399,15 @@ def _dashboard_context():
         "recent_alerts": [_serialize_dashboard_alert(alert) for alert in recent_alerts],
         "latest_batch_id": batch_id,
         "latest_results": latest_rows,
+        "latest_batch_source_type": latest_batch_source_type,
     }
 
 
 def _process_uploaded_dataset(file_storage):
     dataset = load_csv_dataset(file_storage)
+    if is_email_dataset(dataset):
+        return _process_email_uploaded_dataset(dataset, file_storage.filename)
+
     processed = batch_preprocess(dataset)
     engineered = batch_feature_engineering(processed)
     scored = detect_anomalies(engineered, retrain=True)
@@ -382,6 +462,93 @@ def _process_uploaded_dataset(file_storage):
     return batch_id
 
 
+def _process_email_uploaded_dataset(dataset: pd.DataFrame, source_filename: str) -> str:
+    analyzed, company_domain = analyze_email_dataset(dataset)
+    batch_id = uuid4().hex
+    known_users = {user.username: user for user in User.query.all()}
+    logs_to_create: list[Log] = []
+    alerts_to_create: list[Alert] = []
+
+    for _, row in analyzed.iterrows():
+        username = str(row["user"]).strip().lower()
+        user = known_users.get(username)
+        if user is None:
+            user = User(
+                username=username,
+                email=f"{username}@{company_domain or 'generated.local'}",
+                password_hash=generate_password_hash("employee123"),
+                role="employee",
+            )
+            db.session.add(user)
+            db.session.flush()
+            known_users[username] = user
+
+        rule_count = len(row["triggered_rules"])
+        log = Log(
+            batch_id=batch_id,
+            user_id=user.id,
+            event_timestamp=row["date"].to_pydatetime() if hasattr(row["date"], "to_pydatetime") else row["date"],
+            login_frequency=0.0,
+            after_hours_activity=1.0 if bool(row["is_after_hours"]) else 0.0,
+            night_login_count=1.0 if bool(row["is_after_hours"]) else 0.0,
+            file_access_count=0.0,
+            email_activity_count=float(row["email_frequency"]),
+            usb_usage_count=0.0,
+            anomaly_flag=bool(row["threat_status"] == "Threat"),
+            threat_level=str(row["severity"]).lower(),
+            source_filename=source_filename,
+            raw_record={
+                "source_type": "email_insider",
+                "email_id": _json_safe_value(row["id"]),
+                "date": _json_safe_value(row["date"]),
+                "user": username,
+                "pc": _json_safe_value(row["pc"]),
+                "to": _json_safe_value(row["to"]),
+                "cc": _json_safe_value(row["cc"]),
+                "bcc": _json_safe_value(row["bcc"]),
+                "from": _json_safe_value(row["from"]),
+                "size": _json_safe_value(row["size"]),
+                "attachments": _json_safe_value(row["attachments"]),
+                "content": _json_safe_value(row["content"]),
+                "hour": _json_safe_value(row["hour"]),
+                "weekday": _json_safe_value(row["weekday"]),
+                "recipient_count": _json_safe_value(row["recipient_count"]),
+                "email_frequency": _json_safe_value(row["email_frequency"]),
+                "ml_prediction": _json_safe_value(row["ml_prediction"]),
+                "ml_anomaly_score": _json_safe_value(row["ml_anomaly_score"]),
+                "triggered_rule": _json_safe_value(row["triggered_rule"]),
+                "triggered_rules": [_json_safe_value(value) for value in row["triggered_rules"]],
+                "threat_status": _json_safe_value(row["threat_status"]),
+                "severity": _json_safe_value(row["severity"]),
+                "rule_count": rule_count,
+                "company_domain": _json_safe_value(row["company_domain"]),
+                "sender_domain": _json_safe_value(row["sender_domain"]),
+            },
+        )
+        db.session.add(log)
+        db.session.flush()
+
+        risk_score = RiskScore(log=log, score=float(row["risk_score"]))
+        db.session.add(risk_score)
+        logs_to_create.append(log)
+
+        if row["threat_status"] == "Threat":
+            alerts_to_create.append(
+                Alert(
+                    log_id=log.id,
+                    risk_score=float(row["risk_score"]),
+                    threshold=ALERT_THRESHOLD,
+                    severity="critical",
+                    message=str(row["triggered_rule"]),
+                )
+            )
+
+    db.session.flush()
+    db.session.add_all(alerts_to_create)
+    db.session.commit()
+    return batch_id
+
+
 def _json_safe_value(value):
     if isinstance(value, pd.Timestamp):
         return value.isoformat()
@@ -399,6 +566,7 @@ def create_app(config_object=DevelopmentConfig):
     app.register_blueprint(api_bp, url_prefix="/api")
     from routes.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(manual_detect_bp)
 
     @app.context_processor
     def inject_common_context():
@@ -627,7 +795,15 @@ def create_app(config_object=DevelopmentConfig):
                 logging.error("Full pipeline detection failed: %s", exc)
                 return jsonify({"error": str(exc)}), 500
 
-        return render_template("detection.html", analysis=None)
+        default_form = {
+            "login_frequency": 0,
+            "after_hours_count": 0,
+            "night_login_count": 0,
+            "file_access_count": 0,
+            "email_activity_count": 0,
+            "usb_usage_count": 0,
+        }
+        return render_template("behavior_profiling.html", analysis=None, form_data=default_form)
 
     @app.route("/detect", methods=["POST"])
     @_login_required
@@ -739,13 +915,26 @@ def create_app(config_object=DevelopmentConfig):
             batch_id, _ = _latest_batch_logs()
 
         if not batch_id:
-            return render_template("results.html", summary=None, rows=[], batch_id=None)
+            return render_template("results.html", summary=None, rows=[], batch_id=None, charts={}, source_type="")
 
         logs = (
             Log.query.filter_by(batch_id=batch_id)
             .order_by(Log.id.asc())
             .all()
         )
+        source_type = (logs[0].raw_record or {}).get("source_type", "") if logs else ""
+
+        if source_type == "email_insider":
+            payload = _build_email_results_payload(logs)
+            return render_template(
+                "results.html",
+                summary=payload["summary"],
+                rows=payload["rows"],
+                charts=payload["charts"],
+                batch_id=batch_id,
+                source_type=source_type,
+            )
+
         rows = [_serialize_result_row(log) for log in logs]
         summary = {
             "Records Processed": len(rows),
@@ -757,7 +946,14 @@ def create_app(config_object=DevelopmentConfig):
             ),
         }
 
-        return render_template("results.html", summary=summary, rows=rows, batch_id=batch_id)
+        return render_template(
+            "results.html",
+            summary=summary,
+            rows=rows,
+            charts={},
+            batch_id=batch_id,
+            source_type=source_type,
+        )
 
     @app.route("/logout", methods=["GET"])
     def logout():

@@ -11,33 +11,67 @@
         box-shadow: 0 12px 40px rgba(15, 23, 42, 0.05);
     }
 
-    .stat-bar {
+    .summary-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 16px;
-        margin-bottom: 32px;
+        margin: 28px 0 32px;
+    }
+
+    .summary-card {
         background: var(--bg);
-        padding: 20px;
+        border: 1px solid var(--slate-200);
         border-radius: 22px;
-        border: 1px solid var(--slate-100);
+        padding: 20px;
     }
 
-    .stat-box {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .stat-box span {
+    .summary-card span {
+        display: block;
         font-size: 0.8rem;
         font-weight: 700;
         color: var(--slate-500);
         text-transform: uppercase;
+        margin-bottom: 6px;
     }
 
-    .stat-box strong {
-        font-size: 1.4rem;
+    .summary-card strong {
+        font-size: 1.6rem;
         color: var(--green-700);
+    }
+
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 32px;
+    }
+
+    .chart-card {
+        background: var(--bg);
+        border: 1px solid var(--slate-200);
+        border-radius: 22px;
+        padding: 22px;
+    }
+
+    .chart-box {
+        height: 280px;
+        position: relative;
+    }
+
+    .chart-empty {
+        height: 100%;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 18px;
+        color: var(--slate-500);
+        border: 2px dashed var(--slate-200);
+        border-radius: 18px;
+        background: var(--white);
+    }
+
+    .table-wrap {
+        overflow-x: auto;
     }
 
     table {
@@ -59,29 +93,90 @@
         padding: 16px 14px;
         border-bottom: 1px solid var(--slate-100);
         font-size: 0.94rem;
+        vertical-align: top;
     }
 
     .tag {
+        display: inline-flex;
+        align-items: center;
         padding: 6px 12px;
         border-radius: 999px;
         font-weight: 800;
         font-size: 0.78rem;
     }
 
-    .tag.threat { background: #fee2e2; color: #991b1b; }
-    .tag.normal { background: #dcfce7; color: #166534; }
+    .tag.threat {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .tag.normal {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .tag.critical {
+        background: #fff1f2;
+        color: #be123c;
+    }
+
+    .tag.low {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .table-subtext {
+        color: var(--slate-500);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 24px;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: var(--slate-200);
+        margin-bottom: 16px;
+    }
+
+    @media (max-width: 1100px) {
+        .summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 {% endblock %}
 
 {% block content %}
+    {% set safe_summary = summary | default({}, true) %}
+    {% set safe_rows = rows | default([], true) %}
+    {% set safe_charts = charts | default({}, true) %}
+    {% set is_email_batch = source_type == 'email_insider' %}
+
     <div class="report-card">
         <div class="eyebrow">Alerts & Reports</div>
+        {% if is_email_batch %}
+        <h2>Email Insider Threat Detection Report</h2>
+        <p>Rule-based and Isolation Forest analysis for uploaded email activity logs. Batch ID: <strong>{{ batch_id if batch_id else 'N/A' }}</strong></p>
+        {% else %}
         <h2>Analyst Investigation Summary</h2>
-        <p style="margin-bottom: 24px;">Detailed breakdown of the behavior scoring and anomaly detection results for batchID: <strong>{{ batch_id if batch_id else 'N/A' }}</strong></p>
+        <p>Detailed breakdown of the behavior scoring and anomaly detection results for Batch ID: <strong>{{ batch_id if batch_id else 'N/A' }}</strong></p>
+        {% endif %}
 
-        {% if summary %}
-        <div class="stat-bar">
-            {% for label, val in summary.items() %}
-            <div class="stat-box">
+        {% if safe_summary %}
+        <div class="summary-grid">
+            {% for label, val in safe_summary.items() %}
+            <div class="summary-card">
                 <span>{{ label }}</span>
                 <strong>{{ val }}</strong>
             </div>
@@ -89,9 +184,74 @@
         </div>
         {% endif %}
 
-        {% if rows %}
-        <div style="overflow-x: auto;">
+        {% if is_email_batch and safe_rows %}
+        <div class="chart-grid">
+            <section class="chart-card">
+                <div class="eyebrow">Overview</div>
+                <h3>Threat vs Normal</h3>
+                <div class="chart-box">
+                    <canvas id="threatPieChart"></canvas>
+                </div>
+            </section>
+            <section class="chart-card">
+                <div class="eyebrow">Users</div>
+                <h3>User Wise Threat Count</h3>
+                <div class="chart-box">
+                    <canvas id="userThreatChart"></canvas>
+                </div>
+            </section>
+            <section class="chart-card">
+                <div class="eyebrow">Time Pattern</div>
+                <h3>Hourly Suspicious Activity</h3>
+                <div class="chart-box">
+                    <canvas id="hourlyThreatChart"></canvas>
+                </div>
+            </section>
+            <section class="chart-card">
+                <div class="eyebrow">Attachments</div>
+                <h3>Attachment Threat Analysis</h3>
+                <div class="chart-box">
+                    <canvas id="attachmentThreatChart"></canvas>
+                </div>
+            </section>
+        </div>
+        {% endif %}
+
+        {% if safe_rows %}
+        <div class="table-wrap">
             <table>
+                {% if is_email_batch %}
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Date</th>
+                        <th>Attachments</th>
+                        <th>Size</th>
+                        <th>Threat Status</th>
+                        <th>Severity</th>
+                        <th>Triggered Rule</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in safe_rows %}
+                    <tr>
+                        <td><strong>{{ row.user }}</strong></td>
+                        <td>{{ row.date }}</td>
+                        <td>{{ row.attachments }}</td>
+                        <td>{{ row.size }}</td>
+                        <td>
+                            <span class="tag {{ 'threat' if row.threat_status == 'Threat' else 'normal' }}">
+                                {{ row.threat_status }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="tag {{ row.severity | lower }}">{{ row.severity }}</span>
+                        </td>
+                        <td><span class="table-subtext">{{ row.triggered_rule }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% else %}
                 <thead>
                     <tr>
                         <th>Employee ID</th>
@@ -102,7 +262,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in rows %}
+                    {% for row in safe_rows %}
                     <tr>
                         <td><strong>{{ row.user }}</strong></td>
                         <td>
@@ -112,19 +272,134 @@
                         </td>
                         <td><strong>{{ row.risk_score }}</strong></td>
                         <td>{{ row.threat_level }}</td>
-                        <td>
-                            <a href="#" style="color: var(--green-600); font-weight: 700; text-decoration: none;">View Detail</a>
-                        </td>
+                        <td><span class="table-subtext">View detail</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
+                {% endif %}
             </table>
         </div>
         {% else %}
-        <div style="text-align: center; padding: 60px;">
-            <i class="fas fa-folder-open" style="font-size: 3rem; color: var(--slate-200); margin-bottom: 16px;"></i>
+        <div class="empty-state">
+            <i class="fas fa-folder-open"></i>
             <p>No results found for this batch. Please process a dataset first.</p>
         </div>
         {% endif %}
     </div>
+{% endblock %}
+
+{% block extra_js %}
+    {% if source_type == 'email_insider' and rows %}
+    <script id="email-report-chart-data" type="application/json">{{ (charts | default({}, true)) | tojson }}</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chartDataNode = document.getElementById('email-report-chart-data');
+            const chartData = chartDataNode ? JSON.parse(chartDataNode.textContent || '{}') : {};
+
+            function renderEmptyState(canvas, message) {
+                if (!canvas || !canvas.parentElement) {
+                    return;
+                }
+                canvas.style.display = 'none';
+                if (canvas.parentElement.querySelector('.chart-empty')) {
+                    return;
+                }
+                const state = document.createElement('div');
+                state.className = 'chart-empty';
+                state.textContent = message;
+                canvas.parentElement.appendChild(state);
+            }
+
+            if (typeof Chart === 'undefined') {
+                ['threatPieChart', 'userThreatChart', 'hourlyThreatChart', 'attachmentThreatChart'].forEach(function(id) {
+                    renderEmptyState(document.getElementById(id), 'Chart library unavailable.');
+                });
+                return;
+            }
+
+            const threatVsNormal = chartData.threat_vs_normal || {};
+            const userThreatCount = chartData.user_threat_count || {};
+            const hourlyActivity = chartData.hourly_suspicious_activity || {};
+            const attachmentThreatAnalysis = chartData.attachment_threat_analysis || {};
+
+            const pieCanvas = document.getElementById('threatPieChart');
+            const userCanvas = document.getElementById('userThreatChart');
+            const hourlyCanvas = document.getElementById('hourlyThreatChart');
+            const attachmentCanvas = document.getElementById('attachmentThreatChart');
+
+            if ((threatVsNormal.Threat || 0) + (threatVsNormal.Normal || 0) > 0) {
+                new Chart(pieCanvas.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['Threat', 'Normal'],
+                        datasets: [{
+                            data: [threatVsNormal.Threat || 0, threatVsNormal.Normal || 0],
+                            backgroundColor: ['#ef4444', '#22c55e']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            } else {
+                renderEmptyState(pieCanvas, 'No threat distribution available.');
+            }
+
+            const userLabels = Object.keys(userThreatCount);
+            if (userLabels.length > 0) {
+                new Chart(userCanvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: userLabels,
+                        datasets: [{
+                            label: 'Threat Emails',
+                            data: userLabels.map(function(label) { return userThreatCount[label]; }),
+                            backgroundColor: '#15803d',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            } else {
+                renderEmptyState(userCanvas, 'No suspicious user activity available.');
+            }
+
+            const hourLabels = Object.keys(hourlyActivity);
+            if (hourLabels.some(function(label) { return (hourlyActivity[label] || 0) > 0; })) {
+                new Chart(hourlyCanvas.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: hourLabels,
+                        datasets: [{
+                            label: 'Suspicious Emails',
+                            data: hourLabels.map(function(label) { return hourlyActivity[label] || 0; }),
+                            borderColor: '#e11d48',
+                            backgroundColor: 'rgba(225, 29, 72, 0.15)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            } else {
+                renderEmptyState(hourlyCanvas, 'No suspicious hourly activity available.');
+            }
+
+            const attachmentLabels = Object.keys(attachmentThreatAnalysis);
+            if (attachmentLabels.length > 0) {
+                new Chart(attachmentCanvas.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: attachmentLabels,
+                        datasets: [{
+                            data: attachmentLabels.map(function(label) { return attachmentThreatAnalysis[label] || 0; }),
+                            backgroundColor: ['#f59e0b', '#0ea5e9']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            } else {
+                renderEmptyState(attachmentCanvas, 'No attachment threat data available.');
+            }
+        });
+    </script>
+    {% endif %}
 {% endblock %}
