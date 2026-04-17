@@ -59,7 +59,7 @@ def _send_reset_code_email(recipient: str, code: str) -> bool:
         return False
 
     message = EmailMessage()
-    message["Subject"] = "Your CERT Insider password reset code"
+    message["Subject"] = "Your InsiderDetection password reset code"
     message["From"] = sender
     message["To"] = recipient
     message.set_content(

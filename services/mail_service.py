@@ -20,7 +20,7 @@ def send_otp_email(recipient, otp):
         return False
 
     msg = EmailMessage()
-    msg["Subject"] = "Your CERT Insider Verification Code"
+    msg["Subject"] = "Your InsiderDetection Verification Code"
     msg["From"] = sender
     msg["To"] = recipient
     msg.set_content(
@@ -28,7 +28,7 @@ def send_otp_email(recipient, otp):
         f"Your verification code is: {otp}\n\n"
         f"This code is valid for 5 minutes. If you did not request this, please ignore this email.\n\n"
         f"Stay secure,\n"
-        f"CERT Insider Security Team"
+        f"InsiderDetection Security Team"
     )
 
     try:
