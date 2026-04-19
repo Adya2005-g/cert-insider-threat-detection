@@ -251,6 +251,53 @@
             font-size: 0.95rem;
         }
 
+        /* About Section */
+        .about {
+            padding: 6rem 10%;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        }
+
+        .about-wrap {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .about-panel {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .about-panel h3 {
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .about-panel p {
+            color: var(--text-muted);
+        }
+
+        .about-list {
+            list-style: none;
+        }
+
+        .about-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid #e2e8f0;
+            color: var(--text-dark);
+        }
+
+        .about-list li:last-child {
+            border-bottom: none;
+        }
+
+        .about-list strong {
+            color: var(--primary-green);
+        }
+
         /* Footer */
         footer {
             padding: 4rem 10% 2rem;
@@ -322,6 +369,10 @@
             .nav-links {
                 display: none;
             }
+
+            .about-wrap {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -336,7 +387,7 @@
         <ul class="nav-links">
             <li><a href="/">Home</a></li>
             <li><a href="#features">Features</a></li>
-            <li><a href="#">About</a></li>
+            <li><a href="#about">About</a></li>
             <li><a href="/dashboard" class="btn btn-outline">Dashboard</a>
             <li><a href="/detection" class="btn btn-outline">Detection</a></li>
         </ul>
@@ -473,6 +524,36 @@
                 <h3>Real-time Alerts</h3>
                 <p>Immediate notifications for IT security teams when high-risk anomalies are detected in the perimeter.
                 </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="about" id="about">
+        <div class="section-header">
+            <h2>About This Project</h2>
+            <p>InsiderDetection helps security teams spot risky insider behavior early by combining user behavior
+                analytics, anomaly detection, and risk scoring.</p>
+        </div>
+        <div class="about-wrap">
+            <div class="about-panel">
+                <h3>What We Track</h3>
+                <ul class="about-list">
+                    <li><strong>Identity Signals:</strong> Login timing, geo mismatch, and repeated failed sign-ins.
+                    </li>
+                    <li><strong>Data Access:</strong> Sensitive file reads, bulk copy, and unusual delete patterns.</li>
+                    <li><strong>Network Footprint:</strong> Suspicious outbound transfer and unknown domain contact.</li>
+                    <li><strong>Device Behavior:</strong> Application usage spikes and automation-like activity.</li>
+                </ul>
+            </div>
+            <div class="about-panel">
+                <h3>How It Works</h3>
+                <ul class="about-list">
+                    <li><strong>Step 1:</strong> Collect behavioral logs from users, endpoints, and network activity.</li>
+                    <li><strong>Step 2:</strong> Build a normal baseline per user/team using ML models.</li>
+                    <li><strong>Step 3:</strong> Score anomalies by severity and context.</li>
+                    <li><strong>Step 4:</strong> Trigger real-time alerts for high-risk incidents.</li>
+                    <li><strong>Step 5:</strong> Support investigation via dashboard and detection pages.</li>
+                </ul>
             </div>
         </div>
     </section>
