@@ -173,6 +173,13 @@
         <p>Detailed breakdown of the behavior scoring and anomaly detection results for Batch ID: <strong>{{ batch_id if batch_id else 'N/A' }}</strong></p>
         {% endif %}
 
+        {% if batch_id %}
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; margin-bottom: 8px;">
+            <a href="{{ url_for('report_export.export_report', batch_id=batch_id, format='csv') }}" class="tag normal" style="text-decoration: none;">Download CSV</a>
+            <a href="{{ url_for('report_export.export_report', batch_id=batch_id, format='xlsx') }}" class="tag normal" style="text-decoration: none;">Download Excel</a>
+        </div>
+        {% endif %}
+
         {% if safe_summary %}
         <div class="summary-grid">
             {% for label, val in safe_summary.items() %}

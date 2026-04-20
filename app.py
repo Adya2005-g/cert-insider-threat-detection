@@ -19,6 +19,7 @@ from models.risk_score import RiskScore
 from models.user import User
 from routes.api import api_bp
 from routes.manual_detect import manual_detect_bp
+from routes.report_export import report_export_bp
 from services.anomaly_detection import detect_anomalies as detect_pipeline_anomalies
 from services.data_pipeline import feature_engineering as batch_feature_engineering
 from services.data_pipeline import load_csv_dataset
@@ -567,6 +568,7 @@ def create_app(config_object=DevelopmentConfig):
     from routes.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(manual_detect_bp)
+    app.register_blueprint(report_export_bp)
 
     @app.context_processor
     def inject_common_context():
