@@ -74,6 +74,82 @@
         overflow-x: auto;
     }
 
+    .filter-panel {
+        margin: 24px 0;
+        padding: 20px;
+        border-radius: 22px;
+        background: var(--bg);
+        border: 1px solid var(--slate-200);
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .filter-group label {
+        color: var(--slate-500);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid var(--slate-200);
+        border-radius: 12px;
+        background: var(--white);
+        color: var(--slate-950);
+        font: inherit;
+    }
+
+    .filter-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+    }
+
+    .filter-button,
+    .filter-reset {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 11px 16px;
+        border-radius: 12px;
+        border: none;
+        font-weight: 800;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .filter-button {
+        background: var(--green-600);
+        color: var(--white);
+    }
+
+    .filter-reset {
+        background: var(--white);
+        color: var(--slate-700);
+        border: 1px solid var(--slate-200);
+    }
+
+    .filter-count {
+        color: var(--slate-500);
+        font-weight: 700;
+        margin-left: auto;
+    }
+
     table {
         width: 100%;
         border-collapse: collapse;
@@ -148,11 +224,23 @@
         .chart-grid {
             grid-template-columns: 1fr;
         }
+
+        .filter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
     @media (max-width: 720px) {
         .summary-grid {
             grid-template-columns: 1fr;
+        }
+
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-count {
+            margin-left: 0;
         }
     }
 {% endblock %}
@@ -161,6 +249,7 @@
     {% set safe_summary = summary | default({}, true) %}
     {% set safe_rows = rows | default([], true) %}
     {% set safe_charts = charts | default({}, true) %}
+    {% set safe_filters = filters | default({}, true) %}
     {% set is_email_batch = source_type == 'email_insider' %}
 
     <div class="report-card">
@@ -190,6 +279,41 @@
             {% endfor %}
         </div>
         {% endif %}
+
+        <form class="filter-panel" method="GET" action="{{ url_for('results') }}">
+            <input type="hidden" name="batch_id" value="{{ batch_id }}">
+
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="user">User</label>
+                    <input id="user" type="text" name="user" placeholder="Search user" value="{{ safe_filters.user | default('', true) }}">
+                </div>
+
+                <div class="filter-group">
+                    <label for="status">Threat Status</label>
+                    <select id="status" name="status">
+                        <option value="">All Status</option>
+                        <option value="Threat" {% if safe_filters.status == 'Threat' %}selected{% endif %}>Threat</option>
+                        <option value="Suspicious" {% if safe_filters.status == 'Suspicious' %}selected{% endif %}>Suspicious</option>
+                        <option value="Normal" {% if safe_filters.status == 'Normal' %}selected{% endif %}>Normal</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="sort_order">Sort Order</label>
+                    <select id="sort_order" name="sort_order">
+                        <option value="asc" {% if safe_filters.sort_order != 'desc' %}selected{% endif %}>Ascending</option>
+                        <option value="desc" {% if safe_filters.sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="filter-button">Apply Filters</button>
+                <a href="{{ url_for('results', batch_id=batch_id) }}" class="filter-reset">Reset</a>
+                <span class="filter-count">Showing {{ filtered_count | default(safe_rows | length, true) }} of {{ total_count | default(safe_rows | length, true) }} rows</span>
+            </div>
+        </form>
 
         {% if is_email_batch and safe_rows %}
         <div class="chart-grid">

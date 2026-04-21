@@ -310,6 +310,98 @@ def _build_email_results_payload(logs: list[Log]) -> dict:
     }
 
 
+def _report_filters_from_request() -> dict:
+    return {
+        "user": request.args.get("user", "").strip(),
+        "status": request.args.get("status", "").strip(),
+        "severity": request.args.get("severity", "").strip(),
+        "rule": request.args.get("rule", "").strip(),
+        "min_size": request.args.get("min_size", "").strip(),
+        "max_size": request.args.get("max_size", "").strip(),
+        "min_attachments": request.args.get("min_attachments", "").strip(),
+        "max_attachments": request.args.get("max_attachments", "").strip(),
+        "sort_by": request.args.get("sort_by", "date").strip() or "date",
+        "sort_order": request.args.get("sort_order", "asc").strip().lower() or "asc",
+    }
+
+
+def _optional_float(value: str):
+    if value == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def _apply_report_filters(rows: list[dict], filters: dict) -> list[dict]:
+    filtered_rows = list(rows)
+    user_filter = filters["user"].lower()
+    rule_filter = filters["rule"].lower()
+    min_size = _optional_float(filters["min_size"])
+    max_size = _optional_float(filters["max_size"])
+    min_attachments = _optional_float(filters["min_attachments"])
+    max_attachments = _optional_float(filters["max_attachments"])
+
+    if user_filter:
+        filtered_rows = [row for row in filtered_rows if user_filter in str(row.get("user", "")).lower()]
+
+    if filters["status"]:
+        filtered_rows = [
+            row for row in filtered_rows
+            if str(row.get("threat_status", row.get("status", ""))) == filters["status"]
+        ]
+
+    if filters["severity"]:
+        filtered_rows = [
+            row for row in filtered_rows
+            if str(row.get("severity", row.get("threat_level", ""))) == filters["severity"]
+        ]
+
+    if rule_filter:
+        filtered_rows = [
+            row for row in filtered_rows
+            if rule_filter in str(row.get("triggered_rule", "")).lower()
+        ]
+
+    if min_size is not None:
+        filtered_rows = [row for row in filtered_rows if float(row.get("size", 0) or 0) >= min_size]
+
+    if max_size is not None:
+        filtered_rows = [row for row in filtered_rows if float(row.get("size", 0) or 0) <= max_size]
+
+    if min_attachments is not None:
+        filtered_rows = [row for row in filtered_rows if float(row.get("attachments", 0) or 0) >= min_attachments]
+
+    if max_attachments is not None:
+        filtered_rows = [row for row in filtered_rows if float(row.get("attachments", 0) or 0) <= max_attachments]
+
+    sort_by = filters["sort_by"]
+    sort_order = filters["sort_order"]
+    allowed_sort_fields = {
+        "user",
+        "date",
+        "attachments",
+        "size",
+        "threat_status",
+        "severity",
+        "triggered_rule",
+        "risk_score",
+        "status",
+        "threat_level",
+    }
+    if sort_by not in allowed_sort_fields:
+        sort_by = "date"
+
+    numeric_sort_fields = {"attachments", "size", "risk_score"}
+    if sort_by in numeric_sort_fields:
+        key_func = lambda row: float(row.get(sort_by, 0) or 0)
+    else:
+        key_func = lambda row: str(row.get(sort_by, "")).lower()
+
+    return sorted(filtered_rows, key=key_func, reverse=sort_order == "desc")
+
+
 def _latest_batch_logs():
     latest_log = Log.query.order_by(Log.created_at.desc(), Log.id.desc()).first()
     if latest_log is None:
@@ -913,11 +1005,22 @@ def create_app(config_object=DevelopmentConfig):
     @_login_required
     def results():
         batch_id = request.args.get("batch_id")
+        filters = _report_filters_from_request()
         if not batch_id:
             batch_id, _ = _latest_batch_logs()
 
         if not batch_id:
-            return render_template("results.html", summary=None, rows=[], batch_id=None, charts={}, source_type="")
+            return render_template(
+                "results.html",
+                summary=None,
+                rows=[],
+                batch_id=None,
+                charts={},
+                source_type="",
+                filters=filters,
+                filtered_count=0,
+                total_count=0,
+            )
 
         logs = (
             Log.query.filter_by(batch_id=batch_id)
@@ -928,16 +1031,21 @@ def create_app(config_object=DevelopmentConfig):
 
         if source_type == "email_insider":
             payload = _build_email_results_payload(logs)
+            filtered_rows = _apply_report_filters(payload["rows"], filters)
             return render_template(
                 "results.html",
                 summary=payload["summary"],
-                rows=payload["rows"],
+                rows=filtered_rows,
                 charts=payload["charts"],
                 batch_id=batch_id,
                 source_type=source_type,
+                filters=filters,
+                filtered_count=len(filtered_rows),
+                total_count=len(payload["rows"]),
             )
 
         rows = [_serialize_result_row(log) for log in logs]
+        filtered_rows = _apply_report_filters(rows, filters)
         summary = {
             "Records Processed": len(rows),
             "Threats Detected": sum(1 for log in logs if log.anomaly_flag),
@@ -951,10 +1059,13 @@ def create_app(config_object=DevelopmentConfig):
         return render_template(
             "results.html",
             summary=summary,
-            rows=rows,
+            rows=filtered_rows,
             charts={},
             batch_id=batch_id,
             source_type=source_type,
+            filters=filters,
+            filtered_count=len(filtered_rows),
+            total_count=len(rows),
         )
 
     @app.route("/logout", methods=["GET"])
