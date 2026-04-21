@@ -388,8 +388,6 @@
             <li><a href="/">Home</a></li>
             <li><a href="#features">Features</a></li>
             <li><a href="#about">About</a></li>
-            <li><a href="/dashboard" class="btn btn-outline">Dashboard</a>
-            <li><a href="/detection" class="btn btn-outline">Detection</a></li>
         </ul>
         <div class="auth-buttons">
             {% if current_user.is_authenticated %}
@@ -397,7 +395,7 @@
             <a href="/logout" class="btn btn-primary">Logout</a>
             {% else %}
             <a href="/login" class="btn btn-outline">Login</a>
-            <a href="/register" class="btn btn-primary">Get Started</a>
+            <a href="/register" class="btn btn-primary">Sign Up</a>
             {% endif %}
         </div>
     </nav>
@@ -467,11 +465,10 @@
     <section class="hero">
         <div class="hero-content">
             <h1>Detect <span>Insider Threats</span> Before They Happen</h1>
-            <p>Advanced behavioral analytics and machine learning to identify suspicious activity, data exfiltration,
+            <p>Advanced behavioral analytics and anomaly detection to identify suspicious activity, data exfiltration,
                 and unauthorized access.</p>
             <div class="hero-actions">
-                <a href="/register" class="btn btn-primary" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Start Free
-                    Trial</a>
+                <a href="/register" class="btn btn-primary" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Get Started </a>
                 <a href="#features" class="btn" style="color: var(--text-dark); margin-left:1.5rem;"><i
                         class="fas fa-play-circle" style="margin-right: 8px; color: var(--primary-green);"></i> See How
                     It Works</a>
@@ -565,7 +562,7 @@
                     <i class="fas fa-shield-halved"></i>
                     <div>INSIDER<span>DETECTION</span></div>
                 </div>
-                <p>Predicting and preventing insider threats through the power of behavioural machine learning.</p>
+                <p>Predicting and preventing insider threats through the power of behavioural anomaly detection.</p>
             </div>
             <div class="footer-links">
                 <!-- Additional links can go here -->
